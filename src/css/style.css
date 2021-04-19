@@ -1,0 +1,210 @@
+/*  Copyright (c) 2021 Eduardo S. Libardi, All rights reserved. 
+
+Permission to use, copy, modify, and/or distribute this software for any purpose with or 
+without fee is hereby granted, provided that the above copyright notice and this permission 
+notice appear in all copies.
+
+THE SOFTWARE IS PROVIDED "AS IS" AND THE AUTHOR DISCLAIMS ALL WARRANTIES WITH REGARD TO THIS 
+SOFTWARE INCLUDING ALL IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS. IN NO EVENT SHALL 
+THE AUTHOR BE LIABLE FOR ANY SPECIAL, DIRECT, INDIRECT, OR CONSEQUENTIAL DAMAGES OR ANY DAMAGES 
+WHATSOEVER RESULTING FROM LOSS OF USE, DATA OR PROFITS, WHETHER IN AN ACTION OF CONTRACT, 
+NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF OR IN CONNECTION WITH THE USE OR PERFORMANCE 
+OF THIS SOFTWARE.
+*/
+
+
+body {
+  margin-top: 0;
+  margin-left: 0;
+  margin-right: 0;
+  padding: 0px;
+  font-family: "Arial", "Helvetica", sans-serif;
+  background-color: dimgray;
+}
+
+header {
+  border: 0;
+  padding: 0px;
+}
+
+header h2 {
+  background-color: burlywood;
+  text-align: center;
+  color: darkred;
+  margin: 0;
+  padding: 10px;
+}
+
+#local_video {
+  margin-top: 20px;
+  margin-bottom: 0;
+  margin-left: 20px;
+  background: #333333;
+  flex: 1 4
+}
+
+#remote_video {
+  margin-top: 20px;
+  margin-bottom: 0;
+  margin-left: 20px;
+  flex: 2 2
+}
+
+.smallVideoL {
+  max-width: 320px;
+  max-height:240px;
+}
+
+.smallVideoR {
+  max-width: 320px;
+  max-height: 240px;
+}
+
+#video_share {
+  max-width: 320px;
+  max-height: 240px;
+  flex: 2 1
+}
+
+.fullScreen {
+  max-width:800px;
+  max-height:600px;
+}
+
+#buttons {
+  background-color: brown;
+  border: #333333 2px solid;
+}
+
+#startvideo,
+#hangup,
+#sharescreen,
+#shareVideo,
+#tokenGen,
+#stopVideo {
+  border: 2px black solid;
+  box-shadow: 2px gray;
+  border-radius: 5px;
+  background-color: honeydew;
+  margin: 10px;
+  padding: 10px 10px;
+}
+.new-state {
+  background-color: aqua; 
+}
+.checking-state {
+  background-color: blue;
+}
+.connected-state {
+  background-color: green;
+}
+.completed-state {
+  background-color: grey;
+}
+.closed-state {
+  background-color: honeydew;
+}
+.failed-state {
+  background-color: red;
+}
+.disconnected-state {
+  background-color: lightgreen;
+}
+#call-state {
+  border: 2px solid black; 
+  border-radius: 50%;
+  padding: 20px 10px 20px 10px;
+  text-align: center;
+  text-decoration: none;
+  font-size: 12px;
+  margin: 4px 2px;
+  cursor: none; 
+}
+
+#mute {
+  border: 2px solid black; 
+  border-radius: 50%;
+  padding: 20px 15px 20px 15px;
+  text-align: center;
+  text-decoration: none;
+  font-size: 12px;
+}
+
+.mute {
+  background-color: darkred;
+}
+
+.unmute{
+  background-color: honeydew;
+}
+
+#givenToken, #url {
+  padding: 5px;
+}
+/*
+#message {
+  overflow: auto;
+  max-width: 300px;
+  max-height: 400px;
+  margin: 20px;
+}
+*/
+#chat {
+  border: double thick #32a1ce ;
+  border-radius: 5px;
+  background-color: white;
+  margin-top: 10px;
+  margin-right: 10px;
+  margin-left: 10px;
+  margin-bottom: 0px;
+}
+
+#chatInput {
+  border: #32a1ce double thick;
+  border-radius: 5px;
+  background-color: white;
+  margin-top: 0;
+  margin-right: 5px;
+  margin-left: 10px;
+  margin-bottom: 5px;
+}
+
+#send {
+  border: 2px black solid;
+  box-shadow: 2px gray;
+  border-radius: 5px;
+  background-color: honeydew;
+  margin-top: 0;
+  margin-right: 10px;
+  margin-left: 5px;
+  margin-bottom: 5px;
+  padding: 10px 10px;
+}
+
+.fc {
+  display: flex;
+  flex-flow: row wrap;
+}
+/*      .fc > * {
+  flex: 1; 
+} */
+
+header {
+  width: 100vw;
+  height: 50px;
+}
+
+#videos {
+  float: left;
+}
+
+footer {
+  width: 100vw;
+  height:100px;
+  border: 0;
+}
+/* ensure flex-container is always at least as tall as the viewport, 
+minus the height of the header and footer combined. */
+.fc { min-height: calc(100vh - 150px); }
+.fc { height: calc(100vh - 150px); }
+.fc { width: calc(100vw - 300px - 50px); }

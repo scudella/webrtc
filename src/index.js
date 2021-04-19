@@ -1,3 +1,86 @@
+
+/*  Copyright (c) 2021 Eduardo S. Libardi, All rights reserved. 
+
+Permission to use, copy, modify, and/or distribute this software for any purpose with or 
+without fee is hereby granted, provided that the above copyright notice and this permission 
+notice appear in all copies.
+
+THE SOFTWARE IS PROVIDED "AS IS" AND THE AUTHOR DISCLAIMS ALL WARRANTIES WITH REGARD TO THIS 
+SOFTWARE INCLUDING ALL IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS. IN NO EVENT SHALL 
+THE AUTHOR BE LIABLE FOR ANY SPECIAL, DIRECT, INDIRECT, OR CONSEQUENTIAL DAMAGES OR ANY DAMAGES 
+WHATSOEVER RESULTING FROM LOSS OF USE, DATA OR PROFITS, WHETHER IN AN ACTION OF CONTRACT, 
+NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF OR IN CONNECTION WITH THE USE OR PERFORMANCE 
+OF THIS SOFTWARE. */
+
+const http = require("http");
+const { readFile } = require("fs").promises;
+var websocket = require("websocket").server;
+
+var port = 8080;
+var webrtc_clients = [];
+var webrtc_discussions = {};
+
+const http_server = http.createServer();
+
+http_server.on ('request', (request, response) => {
+  var matches = undefined;
+
+  if (matches = request.url.match("^/images/(.*)")) {
+    let path = process.cwd()+"/images/"+matches[1];
+    readFiles(path, response);
+  }
+
+  else if (request.url === '/') {
+    response.writeHead(200, {'content-type': 'text/html'})
+    readhtml(response);
+  }
+
+  else if (matches = request.url.match("^/video/(.*)")) {
+    let path = process.cwd()+"/src/video/"+matches[1];
+    let matchExtension = request.url.match('vtt');
+    if (matchExtension && matchExtension[0] === 'vtt') {
+      response.writeHead(200, {'content-type': 'text/vtt'});
+    }
+    readFiles(path, response);
+  }
+
+  else if (matches = request.url.match('^/js/(.*)')) {  
+    let path = process.cwd()+"/src/js/"+matches[1];
+    response.writeHead(200, {'content-type': 'text/javascript'})
+    readFiles(path, response);
+  }
+
+	else if (matches = request.url.match('^/css/(.*)')) {
+    let path = process.cwd()+"/src/css/"+matches[1];
+    response.writeHead(200, {'content-type': 'text/css'})
+    readFiles(path, response);
+  }
+ });
+
+http_server.listen(port, () => {
+  log_comment(`Server is listening at port ${port}`);
+});
+
+
+const readFiles = async (path, response) => {
+  try {
+    const file = await readFile(path);
+    response.end(file)
+  } catch (error) {
+    log_error(error);
+  }
+}
+
+const readhtml = async (response) => {
+  try {
+    const page = await readFile("./src/index.html", 'utf8'); 
+    response.end(page);
+  }
+  catch (error) {
+    log_error(error);
+  }
+}
+
 /*
 
   webrtc_signal_server.js by Rob Manson
@@ -25,46 +108,6 @@
   THE SOFTWARE.
 
 */
-
-// useful libs
-var http = require("http");
-var fs = require("fs");
-var websocket = require("websocket").server;
-
-// general variables
-var port = 8080;
-var webrtc_clients = [];
-var webrtc_discussions = {};
-
-// web server functions
-var http_server = http.createServer(function(request, response) {
-  var matches = undefined;
-  if (matches = request.url.match("^/images/(.*)")) {
-    var path = process.cwd()+"/images/"+matches[1];
-    fs.readFile(path, function(error, data) {
-      if (error) {
-        log_error(error);
-      } else {
-        response.end(data);
-      }
-    });
-  } else {
-    response.end(page);
-  }
-});
-http_server.listen(port, function() {
-  log_comment("server listening (port "+port+")");
-});
-var page = undefined;
-fs.readFile("src/index.html", function(error, data) {
-  if (error) {
-    log_error(error);
-  } else {
-    page = data;
-  }
-	
-});
-
 // web socket functions
 var websocket_server = new websocket({
   httpServer: http_server
