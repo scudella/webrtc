@@ -26,7 +26,11 @@ http_server.on ('request', (request, response) => {
   var matches = undefined;
 
   if (matches = request.url.match("^/images/(.*)")) {
-    let path = process.cwd()+"/images/"+matches[1];
+    let path = process.cwd()+"/src/images/"+matches[1];
+    let imageExtension = request.url.match('svg');
+    if (imageExtension && imageExtension[0] === 'svg') {
+      response.writeHead(200, {'content-type': 'image/svg+xml'});
+    }
     readFiles(path, response);
   }
 

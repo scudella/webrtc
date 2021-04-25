@@ -152,20 +152,20 @@ peerConnection.ontrack = function (event) {
     let mute =  document.querySelector("#mute");
     mute.disabled = false;
 
+    let shareVideo = document.querySelector("#shareVideo");
+    shareVideo.disabled = false;
+    shareVideo.addEventListener("click", createVideoElement);
+
     let shareScreen = document.getElementById("sharescreen");
     shareScreen.disabled = false;
     shareScreen.addEventListener("click", sharedScreen);
-
-    let shareVideo = document.querySelector("#shareVideo");
-    shareVideo.disabled = false;
-    shareVideo.addEventListener("click", sharedVideo);
 
     let chat = document.querySelector("#chatInput");
     chat.addEventListener('input', chatInput);
 
     let sendMessage = document.querySelector("#send");
     sendMessage.addEventListener('click', sendMessageChat);
-  
+
   } else if (remoteVideoCreated.mediaStream.id === event.streams[0].id){
     document.querySelector('#remote_video').srcObject = event.streams[0];
     receivers = peerConnection.getReceivers();
@@ -227,6 +227,32 @@ peerConnection.addEventListener("iceconnectionstatechange", () => {
   }}
 
 }, false);
+
+const navToggle = document.querySelector('.nav-toggle');
+console.log(navToggle);
+const links = document.querySelector('.menu');
+let ismenu = false;
+navToggle.addEventListener('click', function (evt) {
+  if (evt.target === navToggle) {
+    links.classList.toggle('show-menu');
+    evt.stopPropagation();
+    ismenu = true;
+  }
+});
+
+document.body.addEventListener('click', function (evt) {
+  console.log(evt.target);
+  if(evt.target.parentNode === navToggle) {
+    links.classList.toggle('show-menu');
+    evt.stopPropagation();
+    ismenu = true;
+  } 
+  else if (ismenu){
+      console.log(evt.target); 
+      links.classList.toggle('show-menu');
+      ismenu = false;
+  }
+}, true);
 
 var button = document.getElementById("startvideo");
 button.addEventListener("click", function () {
@@ -547,8 +573,8 @@ function createVideo(videoid, event) {
   let vid = document.createElement('video');
   vid.id=videoid;
   vid.className = 'smallVideoR';
-  vid.setAttribute('autoplay', true);
-  vid.setAttribute('controls', true)
+  vid.setAttribute('autoplay', true); 
+/*  vid.setAttribute('controls', true); */
   console.log(vid);
 
   let local_video = document.querySelector('#local_video');
@@ -761,8 +787,8 @@ function setupCaptureStream(myVideoStream) {
   let buttonElement = document.createElement('button');
   buttonElement.textContent = 'Stop Video Share';
   buttonElement.id = 'stopVideo';
-  let shareVideoElement = document.querySelector('#shareVideo');
-  shareVideoElement.parentNode.append(buttonElement);
+  let hangupElement = document.querySelector('#hangup');
+  hangupElement.parentNode.append(buttonElement);
   buttonElement.addEventListener('click', stopVideo);
 
   // MediaStreamTrack.onended. 
@@ -776,6 +802,27 @@ function setupCaptureStream(myVideoStream) {
     document.querySelector("#shareVideo").disabled = false;
     document.querySelector('#sharescreen').disabled = false;
   } 
+}
+
+function createVideoElement () {
+  let vid = document.createElement('video');
+  vid.id="myVideo";
+  vid.setAttribute('preload', 'metadata');
+  vid.setAttribute('poster', "http://localhost:8080/video/sintel.jpg");
+/*  vid.setAttribute('controls', true); */
+  vid.classList.add('smallVideoM');
+
+  let local_video = document.querySelector('#local_video');
+  local_video.parentNode.insertBefore(vid, local_video.nextSibling);
+  vid.innerHTML += '<source src="http://localhost:8080/video/sintel.mp4" type="video/mp4" />';
+  vid.innerHTML += '<source src="http://localhost:8080/video/sintel.webm" type="video/webm" />';
+  vid.innerHTML += '<track src="http://localhost:8080/video/sintel-captions.vtt" kind="captions" label="English Captions" default/>';
+  vid.innerHTML += '<track src="http://localhost:8080/video/sintel-descriptions.vtt" kind="descriptions" label="Audio Descriptions" />';
+  vid.innerHTML += "Sorry, your browser doesn't support embedded videos.";
+
+  vid.addEventListener('dblclick', videoDblClick); 
+
+  sharedVideo();
 }
 
 function stopVideo () {
@@ -793,7 +840,7 @@ function stopVideo () {
   document.querySelector('#sharescreen').disabled = false;
   document.querySelector('#stopVideo').remove();
   let video = document.querySelector('#myVideo');
-  video.pause();
+  video.remove();
 }
 
 function videoDblClick(event) {

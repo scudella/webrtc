@@ -12,7 +12,6 @@ NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF OR IN CONNECTION WITH THE US
 OF THIS SOFTWARE.
 */
 
-
 body {
   margin-top: 0;
   margin-left: 0;
@@ -23,52 +22,187 @@ body {
 }
 
 header {
+  box-sizing: border-box;
   border: 0;
   padding: 0px;
 }
 
-header h2 {
-  background-color: burlywood;
-  text-align: center;
-  color: darkred;
-  margin: 0;
-  padding: 10px;
+nav {
+  background: #fff;
+  box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);;
 }
+.nav-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0.5rem;
+}
+.nav-toggle {
+  font-size: 1.5rem;
+  color: hsl(205, 78%, 60%);
+  background: transparent;
+  border-color: transparent;
+  transition: all 0.3s linear;
+  cursor: pointer;
+  margin-right: 20rem;
+}
+.nav-toggle:hover {
+  color: hsl(205, 86%, 17%);
+  transform: rotate(90deg);
+}
+.logo {
+  height: 40px;
+}
+.menu {
+  display: none;
+  transition: height 2s, width 2s;
+}
+.show-menu {
+  bottom: 0;
+  height: 100vh;
+  right: 0;
+  background-color: #fff;
+  display: block;
+  position: fixed;
+  top: 0;
+  width: 19rem;
+  z-index: 990;
+  box-shadow: 0 4px 4px 0 rgb(60 64 67 / 30%), 0 8px 12px 6px rgb(60 64 67 / 15%);
+  transition: height 2s, width 2s;
+}
+.inner-menu {
+  box-sizing: border-box;
+  height: 100%;
+  overflow-x: hidden;
+  overflow-y: auto;
+  padding-bottom: 0.5rem;
+  padding-top: 0.5rem;
+  width: 100%;
+  display: block;
+}
+
+.menu-item {
+  text-decoration: none;
+  align-items: center;
+  cursor: pointer;
+  display: flex;
+  height: 3.5rem;
+  padding-left: 1rem;
+  padding-right: 1rem;
+  position: relative;
+  border: solid 1px #32a1ce ;;
+  border-radius: 0 2rem 2rem 0;
+  margin-bottom: 0.5rem;
+  min-width: 12rem;
+}
+.box-item {
+  background-color: rgba(26,115,232,0.122);
+  bottom: 0;
+  overflow: hidden;
+  position: absolute;
+  right: 0.5rem;
+  top: 0;
+  z-index: -1;
+}
+.inner-box-item {
+  border-radius: 50%;
+  bottom: 0;
+  height: 300%;
+  right: -100%;
+  position: absolute;
+  top: -100%;
+  left: 0;
+  width: 300%;
+}
+.avatar {
+  align-items: center;
+  display: flex;
+  flex: 0 0 auto;
+  justify-content: center;
+  width: 2.5rem;
+  color: #5f6368;
+  fill: #5f6368;
+}
+.inner-avatar {
+  fill: currentColor;
+  flex-shrink: 0;
+  overflow: hidden;
+}
+.text {
+  margin-left: 1rem;
+  overflow: hidden;
+  display: block;
+  cursor: pointer;
+}
+.inner-text {
+  letter-spacing: .01785714em;
+  font-family: 'Google Sans',Roboto,Arial,sans-serif;
+  font-size: 0.875rem;
+  font-weight: 500;
+  line-height: 1.25rem;
+  color: #3c4043;
+  text-overflow: ellipsis;
+  overflow: hidden;
+  white-space: nowrap;
+  display: block;
+  cursor: pointer;
+}
+
 
 #local_video {
   margin-top: 20px;
   margin-bottom: 0;
   margin-left: 20px;
-  background: #333333;
-  flex: 1 4
+  flex: 1 8 auto;
+  width: 2%;
 }
 
 #remote_video {
   margin-top: 20px;
   margin-bottom: 0;
   margin-left: 20px;
-  flex: 2 2
+  flex: 2 4 auto;
+  width: 10%;
 }
 
+#myVideo {
+  margin-top: 20px;
+  margin-bottom: 0;
+  margin-left: 20px;
+  order: -1;
+  flex: 8 1 auto;
+  width:80%;
+}
+.smallVideoM {
+  max-width:320px;
+  max-height:240px;
+}
 .smallVideoL {
   max-width: 320px;
+  min-width:80px;
   max-height:240px;
+  min-height:60px;
 }
 
 .smallVideoR {
   max-width: 320px;
+  min-width: 80px;
   max-height: 240px;
+  min-height: 60px;
 }
 
 #video_share {
-  max-width: 320px;
-  max-height: 240px;
-  flex: 2 1
+  margin-top: 20px;
+  margin-bottom: 0;
+  margin-left: 20px;
+  order: -1;
+  flex: 8 1 auto;
+  width: 80%;
 }
 
 .fullScreen {
   max-width:800px;
-  max-height:600px;
+  max-height:420px;
 }
 
 #buttons {
@@ -79,7 +213,6 @@ header h2 {
 #startvideo,
 #hangup,
 #sharescreen,
-#shareVideo,
 #tokenGen,
 #stopVideo {
   border: 2px black solid;
@@ -141,15 +274,17 @@ header h2 {
 #givenToken, #url {
   padding: 5px;
 }
-/*
-#message {
-  overflow: auto;
-  max-width: 300px;
-  max-height: 400px;
-  margin: 20px;
+
+.container {
+  display: grid;
 }
-*/
+.content, .overlay {
+  grid-area: 1 / 1;
+}
 #chat {
+  
+}
+.chat {
   border: double thick #32a1ce ;
   border-radius: 5px;
   background-color: white;
@@ -158,8 +293,10 @@ header h2 {
   margin-left: 10px;
   margin-bottom: 0px;
 }
-
 #chatInput {
+
+}
+.chatInput {
   border: #32a1ce double thick;
   border-radius: 5px;
   background-color: white;
@@ -177,21 +314,21 @@ header h2 {
   margin-top: 0;
   margin-right: 10px;
   margin-left: 5px;
-  margin-bottom: 5px;
+  margin-bottom: 0px;
   padding: 10px 10px;
 }
 
 .fc {
   display: flex;
   flex-flow: row wrap;
+  justify-content: flex-start safe;
+  align-items: flex-start;
+  align-content:flex-start;
 }
-/*      .fc > * {
-  flex: 1; 
-} */
 
 header {
-  width: 100vw;
-  height: 50px;
+  max-width: 100vw;
+  max-height: 10rem;
 }
 
 #videos {
@@ -199,12 +336,17 @@ header {
 }
 
 footer {
-  width: 100vw;
-  height:100px;
+  box-sizing: border-box;
+  max-height:10rem;
   border: 0;
+  max-width: 100vw;
+  margin: 0;
+  bottom: 100vh;
 }
 /* ensure flex-container is always at least as tall as the viewport, 
 minus the height of the header and footer combined. */
-.fc { min-height: calc(100vh - 150px); }
-.fc { height: calc(100vh - 150px); }
-.fc { width: calc(100vw - 300px - 50px); }
+.fc { max-height: calc(100vh - 28rem); }
+.fc { width: calc(100vw - 24rem); }
+
+.sc { min-height: calc(100vh - 8rem); }
+.sc { max-width: 300px }
