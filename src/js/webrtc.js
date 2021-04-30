@@ -12,17 +12,16 @@ NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF OR IN CONNECTION WITH THE US
 OF THIS SOFTWARE.
 */
 
-
-
-var call_token; 
-var socket; 
-var peerConnection; 
+var call_token;
+var socket;
+var peerConnection;
 var canvas;
 var ctx;
-var x = 10, y=10;
+var x = 10,
+  y = 10;
 var dataChannel = null;
 var messages = [];
-var allMediaStreams= [];
+var allMediaStreams = [];
 var connection = [];
 var screenReplaceVideo = false;
 
@@ -40,14 +39,14 @@ class Message {
     this._message = message;
     this._fromMe = fromMe;
     this._date = date;
-  } 
+  }
 
   get fromName() {
     return this._fromName;
   }
 
   set fromName(newFromName) {
-    this._fromName = newFromName
+    this._fromName = newFromName;
   }
   get message() {
     return this._message;
@@ -65,36 +64,33 @@ class Message {
     this._fromMe = newFromMe;
   }
 
-  set date(date) { 
-    this._date = date; 
+  set date(date) {
+    this._date = date;
   }
 
   get date() {
-    let newDate = new Date; 
-    return newDate.toDateString(); 
+    let newDate = new Date();
+    return newDate.toDateString();
   }
 
   get time() {
-
-    let newTime = new Date; 
+    let newTime = new Date();
     return newTime.toLocaleString().slice(9);
   }
 }
 
 window.onload = function init() {
-  const tokenGen = document.querySelector("#tokenGen");
+  const tokenGen = document.querySelector('#tokenGen');
   tokenGen.addEventListener('click', processGen);
 
   canvas = document.querySelector('#chat');
   ctx = canvas.getContext('2d');
 
-  let configuration = {iceservers: [
-      { urls: 
-        "stun:stun.l.google.com:19302"
-      } 
-  ]}
+  let configuration = {
+    iceservers: [{ urls: 'stun:stun.l.google.com:19302' }],
+  };
   peerConnection = new RTCPeerConnection(configuration);
-  console.log("The peerConnection is: ")
+  console.log('The peerConnection is: ');
   console.log(peerConnection);
   var receivers = peerConnection.getReceivers();
   console.log(receivers);
@@ -104,394 +100,418 @@ window.onload = function init() {
       socket.send(
         JSON.stringify({
           token: call_token,
-          type: "ice-candidate",
-          candidate: event.candidate
+          type: 'ice-candidate',
+          candidate: event.candidate,
         })
       );
     }
   };
 
-
-// let the "negotiationneeded" event trigger offer generation
-peerConnection.onnegotiationneeded = async () => {
-  console.log('Negotiation Needed. IceConnectionState is: ' + peerConnection.iceConnectionState);
-  try {
-    if(peerConnection.iceConnectionState !== 'new') {
-      await peerConnection.setLocalDescription();
+  // let the "negotiationneeded" event trigger offer generation
+  peerConnection.onnegotiationneeded = async () => {
+    console.log(
+      'Negotiation Needed. IceConnectionState is: ' +
+        peerConnection.iceConnectionState
+    );
+    try {
+      if (peerConnection.iceConnectionState !== 'new') {
+        await peerConnection.setLocalDescription();
         // send the offer to the other peer
         socket.send(
           JSON.stringify({
             token: call_token,
-            type: "description",
-            sdp: peerConnection.localDescription
+            type: 'description',
+            sdp: peerConnection.localDescription,
           })
         );
+      }
+    } catch (err) {
+      console.error(err);
     }
-  } catch (err) {
-    console.error(err);
-  }
-};
+  };
 
-peerConnection.ontrack = function (event) {
-  console.log('ontrack called. The event is:');
-  console.log(event);
-  let remoteVideoCreated = allMediaStreams
-  .find((stream) => stream.videoId === 'remote_video');
-  let videoShare  = allMediaStreams
-  .find((stream) => stream.videoId === 'video_share');
+  peerConnection.ontrack = function (event) {
+    console.log('ontrack called. The event is:');
+    console.log(event);
+    let remoteVideoCreated = allMediaStreams.find(
+      (stream) => stream.videoId === 'remote_video'
+    );
+    let videoShare = allMediaStreams.find(
+      (stream) => stream.videoId === 'video_share'
+    );
 
-  if (!remoteVideoCreated) {
-    let remote_video = "remote_video";
-    remoteVideoCreated = createVideo(remote_video, event);
-    allMediaStreams.push({mediaStream: remoteVideoCreated, videoId: "remote_video"});
+    if (!remoteVideoCreated) {
+      let remote_video = 'remote_video';
+      remoteVideoCreated = createVideo(remote_video, event);
+      allMediaStreams.push({
+        mediaStream: remoteVideoCreated,
+        videoId: 'remote_video',
+      });
 
-    let hangup = document.getElementById("hangup");
-    hangup.disabled = false;
-    hangup.addEventListener("click", hangUpCall);
+      let hangup = document.getElementById('hangup');
+      hangup.disabled = false;
+      hangup.addEventListener('click', hangUpCall);
 
-    let mute =  document.querySelector("#mute");
-    mute.disabled = false;
+      let mute = document.querySelector('#mute');
+      mute.disabled = false;
 
-    let shareVideo = document.querySelector("#shareVideo");
-    shareVideo.disabled = false;
-    shareVideo.addEventListener("click", createVideoElement);
+      let shareVideo = document.querySelector('#shareVideo');
+      shareVideo.disabled = false;
+      shareVideo.addEventListener('click', createVideoElement);
 
-    let shareScreen = document.getElementById("sharescreen");
-    shareScreen.disabled = false;
-    shareScreen.addEventListener("click", sharedScreen);
+      let shareScreen = document.getElementById('sharescreen');
+      shareScreen.disabled = false;
+      shareScreen.addEventListener('click', sharedScreen);
 
-    let chat = document.querySelector("#chatInput");
-    chat.addEventListener('input', chatInput);
+      let chat = document.querySelector('#chatInput');
+      chat.addEventListener('input', chatInput);
 
-    let sendMessage = document.querySelector("#send");
-    sendMessage.addEventListener('click', sendMessageChat);
+      let sendMessage = document.querySelector('#send');
+      sendMessage.addEventListener('click', sendMessageChat);
+    } else if (remoteVideoCreated.mediaStream.id === event.streams[0].id) {
+      document.querySelector('#remote_video').srcObject = event.streams[0];
+      receivers = peerConnection.getReceivers();
+      console.log(receivers);
+    } else if (!videoShare) {
+      let video_share = 'video_share';
+      videoShare = createVideo(video_share, event);
+      allMediaStreams.push({ mediaStream: videoShare, videoId: 'video_share' });
+      console.log('Shared Video Arrived');
 
-  } else if (remoteVideoCreated.mediaStream.id === event.streams[0].id){
-    document.querySelector('#remote_video').srcObject = event.streams[0];
-    receivers = peerConnection.getReceivers();
-    console.log(receivers);
-  }
-  
-  else if (!videoShare) {
-    let video_share = 'video_share';
-    videoShare = createVideo(video_share, event);
-    allMediaStreams.push({mediaStream: videoShare, videoId: "video_share"});
-    console.log("Shared Video Arrived");
+      document.querySelector('#shareVideo').disabled = true;
 
-    document.querySelector("#shareVideo").disabled = true;
-
-    if (!screenReplaceVideo) {
-      document.getElementById("sharescreen").disabled = true;
-    }
-      // Check for tracks removed 
-    setTimeout (checkRemoveTrack, 1000);
-
-  } else if (videoShare.mediaStream.id === event.streams[0].id) {
+      if (!screenReplaceVideo) {
+        document.getElementById('sharescreen').disabled = true;
+      }
+      // Check for tracks removed
+      setTimeout(checkRemoveTrack, 1000);
+    } else if (videoShare.mediaStream.id === event.streams[0].id) {
       document.querySelector('#video_share').srcObject = event.streams[0];
-  }
+    } else {
+      console.log(event.streams[0].id);
+    }
+  };
 
-  else {
-    console.log(event.streams[0].id);
-  }
+  peerConnection.addEventListener(
+    'iceconnectionstatechange',
+    () => {
+      let stateElem = document.querySelector('#call-state');
+      stateElem.className = `${peerConnection.iceConnectionState}-state`;
 
+      {
+        switch (peerConnection.iceConnectionState) {
+          case 'new':
+            console.log(
+              'The ICE agent is gathering addresses or is waiting to be given remote candidates'
+            );
+            break;
+          case 'checking':
+            console.log('The ICE agent is checking candidates.');
+            break;
+          case 'connected':
+            console.log('The ice connection has been established.');
+            break;
+          case 'completed':
+            console.log('ICE has found a connection for all components.');
+            break;
+          case 'closed':
+            console.log('Call closed');
+            closeVideoCall();
+            break;
+          case 'failed':
+            console.log('Call failed');
+            closeVideoCall();
+            break;
+          case 'disconnected':
+            console.log('State disconnected. May be temporary.');
+            break;
+        }
+      }
+    },
+    false
+  );
+
+  const navToggle = document.querySelector('.nav-toggle');
+  console.log(navToggle);
+  const links = document.querySelector('.menu');
+  let ismenu = false;
+  navToggle.addEventListener('click', function (evt) {
+    if (evt.target === navToggle) {
+      links.classList.toggle('show-menu');
+      evt.stopPropagation();
+      ismenu = true;
+    }
+  });
+
+  document.body.addEventListener(
+    'click',
+    function (evt) {
+      console.log(evt.target);
+      if (evt.target.parentNode === navToggle) {
+        links.classList.toggle('show-menu');
+        evt.stopPropagation();
+        ismenu = true;
+      } else if (ismenu) {
+        console.log(evt.target);
+        links.classList.toggle('show-menu');
+        ismenu = false;
+      }
+    },
+    true
+  );
+
+  var button = document.getElementById('startvideo');
+  button.addEventListener('click', function () {
+    button.disabled = true;
+
+    navigator.mediaDevices
+      .getUserMedia({
+        audio: true,
+        video: true,
+      })
+      .then(function (stream) {
+        var video = document.getElementById('local_video');
+        video.addEventListener('dblclick', videoDblClick);
+        video.srcObject = stream;
+        video.style.backgroundColor = 'transparent';
+        video.play();
+
+        if (screenReplaceVideo) {
+          let senders = [];
+          stream
+            .getTracks()
+            .forEach((track) =>
+              senders.push(peerConnection.addTrack(track, stream))
+            );
+
+          allMediaStreams.push({
+            mediaStream: stream,
+            senders: senders,
+            videoId: 'local_video',
+          });
+        } else {
+          stream
+            .getTracks()
+            .forEach((track) => peerConnection.addTrack(track, stream));
+          allMediaStreams.push({ mediaStream: stream, videoId: 'local_video' });
+        }
+
+        let mute = document.querySelector('#mute');
+        mute.addEventListener('click', muteLocalVideo);
+
+        socket = new WebSocket('ws://localhost:8080');
+
+        if (
+          document.location.hash === '' ||
+          document.location.hash === undefined
+        ) {
+          // Caller leg
+
+          if (dataChannel === null) {
+            dataChannel = peerConnection.createDataChannel('chat');
+            console.log('data channel created ');
+            console.log(dataChannel);
+
+            dataChannel.onopen = function () {
+              console.log('Caller data channel opened');
+            };
+
+            dataChannel.onmessage = function (event) {
+              let date = new Date();
+              date.toDateString();
+              var messageR = new Message('Remote', event.data, false, date);
+              messages.push(messageR);
+              console.log(messages.length);
+              printMessage(canvas, ctx, messages);
+            };
+          }
+
+          const givenToken = document.querySelector('#givenToken');
+          document.querySelector('#tokenGen').disabled = true;
+          let token = givenToken.value;
+
+          if (token === '' || token === undefined) {
+            // create the unique token for this call
+            token = Date.now() + '-' + Math.round(Math.random() * 10000);
+            givenToken.value = token;
+          }
+
+          call_token = '#' + token;
+          console.log(token);
+          givenToken.disabled = true;
+
+          connection.push = new PeerConnection(
+            token,
+            peerConnection,
+            allMediaStreams
+          );
+          // set location.hash to the unique token for this call
+          document.location.hash = token;
+
+          socket.onopen = function () {
+            socket.onmessage = callerSignalling;
+
+            socket.send(
+              JSON.stringify({
+                token: call_token,
+                type: 'join',
+              })
+            );
+          };
+
+          document.title = 'Caller Leg';
+          let url = document.querySelector('#url');
+          url.value = document.location;
+        } else {
+          // Callee Leg
+
+          peerConnection.ondatachannel = function (event) {
+            dataChannel = event.channel;
+            dataChannel.onopen = function () {
+              console.log('Data channel opened');
+            };
+
+            dataChannel.onmessage = function (event) {
+              let date = new Date();
+              date.toDateString();
+              var messageR = new Message('Remote', event.data, false, date);
+              messages.push(messageR);
+              console.log(messages.length);
+              printMessage(canvas, ctx, messages);
+            };
+          };
+
+          const givenToken = document.querySelector('#givenToken');
+          document.querySelector('#tokenGen').disabled = true;
+
+          call_token = document.location.hash;
+          console.log(call_token.slice(1));
+          let token = call_token.slice(1);
+          givenToken.value = token;
+          givenToken.disabled = true;
+
+          connection.push = new PeerConnection(
+            token,
+            peerConnection,
+            allMediaStreams
+          );
+          let url = document.querySelector('#url');
+          url.value = document.location;
+
+          socket.onopen = function () {
+            socket.onmessage = calleeSignalling;
+
+            // This message is for the server link me to the token
+            socket.send(
+              JSON.stringify({
+                token: call_token,
+                type: 'join',
+              })
+            );
+
+            // let the peer know this leg is ready to start the call
+            socket.send(
+              JSON.stringify({
+                token: call_token,
+                type: 'callee_arrived',
+              })
+            );
+          };
+
+          document.title = 'Callee Leg';
+        }
+      })
+      .catch(handleGetUserMediaError);
+  });
 };
 
-peerConnection.addEventListener("iceconnectionstatechange", () => {
-  let stateElem = document.querySelector("#call-state");
-  stateElem.className = `${peerConnection.iceConnectionState}-state`;
+/* functions used above are defined below */
 
-  {switch (peerConnection.iceConnectionState) {
-    case "new":
-      console.log("The ICE agent is gathering addresses or is waiting to be given remote candidates");
-      break;
-    case "checking":
-      console.log("The ICE agent is checking candidates.");
-      break;
-    case "connected":
-      console.log("The ice connection has been established.");
-      break;
-    case "completed":
-      console.log("ICE has found a connection for all components.");
-      break;
-    case "closed":
-      console.log("Call closed");
-      closeVideoCall();
-      break;
-    case "failed":
-      console.log("Call failed");
-      closeVideoCall();
-      break;
-    case "disconnected":
-      console.log("State disconnected. May be temporary.");
-      break;
-  }}
-
-}, false);
-
-const navToggle = document.querySelector('.nav-toggle');
-console.log(navToggle);
-const links = document.querySelector('.menu');
-let ismenu = false;
-navToggle.addEventListener('click', function (evt) {
-  if (evt.target === navToggle) {
-    links.classList.toggle('show-menu');
-    evt.stopPropagation();
-    ismenu = true;
-  }
-});
-
-document.body.addEventListener('click', function (evt) {
-  console.log(evt.target);
-  if(evt.target.parentNode === navToggle) {
-    links.classList.toggle('show-menu');
-    evt.stopPropagation();
-    ismenu = true;
-  } 
-  else if (ismenu){
-      console.log(evt.target); 
-      links.classList.toggle('show-menu');
-      ismenu = false;
-  }
-}, true);
-
-var button = document.getElementById("startvideo");
-button.addEventListener("click", function () {
-  button.disabled = true;
-
-  navigator.mediaDevices
-    .getUserMedia({
-      audio: true, 
-      video: true, 
-    })
-    .then(function (stream) {
-      var video = document.getElementById("local_video");
-      video.addEventListener('dblclick', videoDblClick);
-      video.srcObject = stream;
-      video.style.backgroundColor = "transparent";
-      video.play();
-
-      if (screenReplaceVideo) {
-        let senders = [];
-        stream.getTracks().forEach((track) => senders.push(peerConnection.addTrack(track, stream)) );
-
-        allMediaStreams
-        .push({mediaStream: stream, senders: senders, videoId: "local_video"});
-
-      } else {
-        stream.getTracks().forEach((track) => peerConnection.addTrack(track, stream)
-        );
-        allMediaStreams.push({mediaStream: stream, videoId: "local_video"});
-      }
-
-      let mute = document.querySelector("#mute");
-      mute.addEventListener('click', muteLocalVideo);
-
-      socket = new WebSocket("ws://localhost:8080");
-
-      if (document.location.hash === "" || document.location.hash === undefined) {
-
-        // Caller leg
-
-        if (dataChannel === null) {
-          dataChannel = peerConnection.createDataChannel('chat');
-          console.log("data channel created ");
-          console.log(dataChannel);
-
-          dataChannel.onopen = function () {
-            console.log("Caller data channel opened");
-          }
-
-          dataChannel.onmessage = function (event) {
-            let date = new Date; 
-            date.toDateString(); 
-            var messageR = new Message ("Remote", event.data, false, date);
-            messages.push (messageR);
-            console.log(messages.length);
-            printMessage(canvas, ctx, messages);
-          }
-        }
-
-        const givenToken = document.querySelector("#givenToken");
-        document.querySelector("#tokenGen").disabled = true;
-        let token = givenToken.value;
-
-        if(token === "" || token === undefined ) {
-          // create the unique token for this call
-          token = Date.now() + "-" + Math.round(Math.random() * 10000); 
-          givenToken.value = token;
-        }
-
-        call_token = "#" + token;
-        console.log(token);
-        givenToken.disabled = true;
-
-        connection.push = new PeerConnection(token, peerConnection, allMediaStreams);
-        // set location.hash to the unique token for this call
-        document.location.hash = token;
-
-        socket.onopen = function () {
-          socket.onmessage = callerSignalling;
-
-          socket.send(
-            JSON.stringify({
-              token: call_token,
-              type: "join"
-            })
-          );
-        };
-
-        document.title = "Caller Leg";
-        let url = document.querySelector("#url");
-        url.value = document.location;
-
-      } else {
-
-        // Callee Leg
-
-        peerConnection.ondatachannel = function (event) {
-          dataChannel =  event.channel;
-          dataChannel.onopen = function () {
-            console.log("Data channel opened");
-          }
-
-          dataChannel.onmessage = function (event) {
-            let date = new Date; 
-            date.toDateString(); 
-            var messageR = new Message ("Remote", event.data, false, date);
-            messages.push (messageR);
-            console.log(messages.length);
-            printMessage(canvas, ctx, messages);
-          }
-        }
-
-        const givenToken = document.querySelector("#givenToken");
-        document.querySelector("#tokenGen").disabled = true;
-        
-        call_token = document.location.hash;
-        console.log(call_token.slice(1));
-        let token = call_token.slice(1);
-        givenToken.value = token;
-        givenToken.disabled = true;
-          
-        connection.push= new PeerConnection(token, peerConnection, allMediaStreams);
-        let url = document.querySelector("#url");
-        url.value = document.location;
-        
-        socket.onopen = function () {
-          
-          socket.onmessage = calleeSignalling;
-
-          // This message is for the server link me to the token
-          socket.send(
-            JSON.stringify({
-              token: call_token,
-              type: "join"
-            })
-          );
-
-          // let the peer know this leg is ready to start the call
-          socket.send(
-            JSON.stringify({
-              token: call_token,
-              type: "callee_arrived"
-            })
-          );
-        };
-
-        document.title = "Callee Leg";
-      }
-    })
-    .catch(handleGetUserMediaError);
-  });
-}
-
-  /* functions used above are defined below */
-
-function processGen () {
-  const givenToken = document.querySelector("#givenToken");
-  const token = Date.now() + "-" + Math.round(Math.random() * 10000);
-  call_token = "#" + token;
+function processGen() {
+  const givenToken = document.querySelector('#givenToken');
+  const token = Date.now() + '-' + Math.round(Math.random() * 10000);
+  call_token = '#' + token;
   givenToken.value = token;
 }
 
 function handleGetUserMediaError(e) {
   switch (e.name) {
-    case "NotFoundError":
+    case 'NotFoundError':
       alert(
-        "Unable to open your call because no camera and/or microphone" +
-          "were found."
+        'Unable to open your call because no camera and/or microphone' +
+          'were found.'
       );
       break;
-    case "SecurityError":
-    case "PermissionDeniedError":
+    case 'SecurityError':
+    case 'PermissionDeniedError':
       // Do nothing; this is the same as the user canceling the call.
       break;
     default:
-      alert("Error opening your camera and/or microphone: " + e.message);
+      alert('Error opening your camera and/or microphone: ' + e.message);
       break;
   }
 
   closeVideoCall();
 }
 
-  // handle signals as a caller
+// handle signals as a caller
 function callerSignalling(event) {
   var signal = JSON.parse(event.data);
-  if (signal.type === "callee_arrived") {
-    peerConnection.createOffer()
+  if (signal.type === 'callee_arrived') {
+    peerConnection
+      .createOffer()
       .then(function (offer) {
-        console.log("Offer created. Set local Description");
+        console.log('Offer created. Set local Description');
         return peerConnection.setLocalDescription(offer);
       })
       .then(function () {
-        console.log("Description created. Sent to peer.");
+        console.log('Description created. Sent to peer.');
         socket.send(
           JSON.stringify({
             token: call_token,
-            type: "description",
-            sdp: peerConnection.localDescription
+            type: 'description',
+            sdp: peerConnection.localDescription,
           })
         );
       })
       .catch(function (err) {
         log_error(err);
       });
-
-  } else if (signal.type === "ice-candidate") {
-      console.log("New ice-candidate message received.");
-      peerConnection.addIceCandidate(
-      new RTCIceCandidate(signal.candidate)
+  } else if (signal.type === 'ice-candidate') {
+    console.log('New ice-candidate message received.');
+    peerConnection.addIceCandidate(new RTCIceCandidate(signal.candidate));
+  } else if (signal.type === 'description') {
+    console.log(
+      'New description message received. Set remote description. Type is ' +
+        signal.sdp.type
     );
-
-  } else if (signal.type === "description") {
-      console.log("New description message received. Set remote description. Type is " + signal.sdp.type);
-      if(signal.sdp.type === 'answer') {
-        peerConnection.setRemoteDescription(signal.sdp)
+    if (signal.sdp.type === 'answer') {
+      peerConnection
+        .setRemoteDescription(signal.sdp)
         .then(function () {
-          console.log("Remote Session Description set.");
+          console.log('Remote Session Description set.');
         })
         .catch(function (err) {
           log_error(err);
         });
-    }
-
-    else {
-      peerConnection.setRemoteDescription(signal.sdp)
+    } else {
+      peerConnection
+        .setRemoteDescription(signal.sdp)
         .then(function () {
-          console.log("Remote Session Description set. Creating answer");
+          console.log('Remote Session Description set. Creating answer');
           return peerConnection.createAnswer();
         })
         .then(function (answer) {
-          console.log("Answer created. Set local description")
+          console.log('Answer created. Set local description');
           return peerConnection.setLocalDescription(answer);
         })
         .then(function () {
-          console.log("Local description set. Send description to peer")
+          console.log('Local description set. Send description to peer');
           socket.send(
             JSON.stringify({
               token: call_token,
-              type: "description",
-              sdp: peerConnection.localDescription
+              type: 'description',
+              sdp: peerConnection.localDescription,
             })
           );
         })
@@ -499,93 +519,90 @@ function callerSignalling(event) {
           log_error(err);
         });
     }
-
-  } else if (signal.type === "hang-up") {
-    console.log("Received hang up notification from other peer");
+  } else if (signal.type === 'hang-up') {
+    console.log('Received hang up notification from other peer');
     closeVideoCall();
-
   } else {
-    console.log("Non-handled " + signal.type + " received");
+    console.log('Non-handled ' + signal.type + ' received');
   }
 }
 
-  // handle signals as a callee
+// handle signals as a callee
 
 function calleeSignalling(event) {
   var signal = JSON.parse(event.data);
-  if (signal.type === "ice-candidate") {
-    console.log("New Ice Candidate message received.");
-    peerConnection.addIceCandidate(
-      new RTCIceCandidate(signal.candidate)
+  if (signal.type === 'ice-candidate') {
+    console.log('New Ice Candidate message received.');
+    peerConnection.addIceCandidate(new RTCIceCandidate(signal.candidate));
+  } else if (signal.type === 'description') {
+    console.log(
+      'New description message received. Set remote description. Type is ' +
+        signal.sdp.type
     );
-
-  } else if (signal.type === "description") {
-    console.log("New description message received. Set remote description. Type is " + signal.sdp.type);
-    if(signal.sdp.type === 'offer') {
-      peerConnection.setRemoteDescription(signal.sdp)
-      .then(function () {
-        console.log("Remote Session Description set. Creating answer");
-        return peerConnection.createAnswer();
-      })
-      .then(function (answer) {
-        console.log("Answer created. Set local description")
-        return peerConnection.setLocalDescription(answer);
-      })
-      .then(function () {
-        console.log("Local description set. Send description to peer")
-        socket.send(
-          JSON.stringify({
-            token: call_token,
-            type: "description",
-            sdp: peerConnection.localDescription
-          })
-        );
-      })
-      .catch(function (err) {
-        log_error(err);
-      });
+    if (signal.sdp.type === 'offer') {
+      peerConnection
+        .setRemoteDescription(signal.sdp)
+        .then(function () {
+          console.log('Remote Session Description set. Creating answer');
+          return peerConnection.createAnswer();
+        })
+        .then(function (answer) {
+          console.log('Answer created. Set local description');
+          return peerConnection.setLocalDescription(answer);
+        })
+        .then(function () {
+          console.log('Local description set. Send description to peer');
+          socket.send(
+            JSON.stringify({
+              token: call_token,
+              type: 'description',
+              sdp: peerConnection.localDescription,
+            })
+          );
+        })
+        .catch(function (err) {
+          log_error(err);
+        });
+    } else {
+      peerConnection
+        .setRemoteDescription(signal.sdp)
+        .then(function () {
+          console.log('Remote Session Description set.');
+        })
+        .catch(function (err) {
+          log_error(err);
+        });
     }
-
-    else {
-      peerConnection.setRemoteDescription(signal.sdp)
-      .then(function () {
-        console.log("Remote Session Description set.");
-      })
-      .catch(function (err) {
-        log_error(err);
-      });
-    }
-
-  } else if (signal.type === "hang-up") {
-      console.log("Received hang up notification from other peer");
-      closeVideoCall();
+  } else if (signal.type === 'hang-up') {
+    console.log('Received hang up notification from other peer');
+    closeVideoCall();
   } else {
-    console.log("Non-handled " + signal.type + " received");
+    console.log('Non-handled ' + signal.type + ' received');
   }
 }
 
-  // generic error handler
+// generic error handler
 function log_error(error) {
   console.log(error);
 }
 
 function createVideo(videoid, event) {
   let vid = document.createElement('video');
-  vid.id=videoid;
+  vid.id = videoid;
   vid.className = 'smallVideoR';
-  vid.setAttribute('autoplay', true); 
-/*  vid.setAttribute('controls', true); */
+  vid.setAttribute('autoplay', true);
+  /*  vid.setAttribute('controls', true); */
   console.log(vid);
 
   let local_video = document.querySelector('#local_video');
   local_video.parentNode.insertBefore(vid, local_video.nextSibling);
 
   vid.srcObject = event.streams[0];
-  vid.addEventListener("dblclick", videoDblClick);
+  vid.addEventListener('dblclick', videoDblClick);
 
-      //  Feature not supported by most browsers. 
-      //  removetrack event
-      /*  newvid.videoTracks.addEventListener('removetrack', (event) => {
+  //  Feature not supported by most browsers.
+  //  removetrack event
+  /*  newvid.videoTracks.addEventListener('removetrack', (event) => {
             console.log(`Video track: ${event.track.label} removed`);
             let receivedVideoStream = newvid.srcObject;
             let trackList = receivedVideoStream.getTracks();
@@ -599,8 +616,8 @@ function createVideo(videoid, event) {
 function checkRemoveTrack() {
   let timeout = true;
   for (let i = 0; i < allMediaStreams.length; i++) {
-    if(allMediaStreams[i].videoId === "video_share") {
-      const videoTracks = allMediaStreams[i].mediaStream.getTracks(); 
+    if (allMediaStreams[i].videoId === 'video_share') {
+      const videoTracks = allMediaStreams[i].mediaStream.getTracks();
       if (!videoTracks.length) {
         // Remove object
         allMediaStreams.splice(i, 1);
@@ -617,16 +634,15 @@ function checkRemoveTrack() {
       }
     }
   }
-  if(timeout) {
+  if (timeout) {
     setTimeout(checkRemoveTrack, 1000);
   }
 }
 
 function closeVideoCall() {
-  const remoteVideo = document.getElementById("remote_video");
-  const localVideo = document.getElementById("local_video");
-  const callState =  document.querySelector("#call-state");
-
+  const remoteVideo = document.getElementById('remote_video');
+  const localVideo = document.getElementById('local_video');
+  const callState = document.querySelector('#call-state');
 
   if (peerConnection) {
     peerConnection.ontrack = null;
@@ -641,7 +657,7 @@ function closeVideoCall() {
     if (remoteVideo.srcObject) {
       remoteVideo.srcObject.getTracks().forEach((track) => track.stop());
       remoteVideo.srcObject = null;
-      remoteVideo.style.backgroundColor="#333333";
+      remoteVideo.style.backgroundColor = '#333333';
     }
 
     if (localVideo.srcObject) {
@@ -654,22 +670,22 @@ function closeVideoCall() {
     peerConnection = null;
   }
 
-  remoteVideo.removeAttribute("src");
-  remoteVideo.removeAttribute("srcObject");
-  localVideo.removeAttribute("src");
-  remoteVideo.removeAttribute("srcObject");
+  remoteVideo.removeAttribute('src');
+  remoteVideo.removeAttribute('srcObject');
+  localVideo.removeAttribute('src');
+  remoteVideo.removeAttribute('srcObject');
 
-  document.getElementById("hangup").disabled = true;
-  document.getElementById("sharescreen").disabled = true;
-  document.querySelector("#mute").disabled = true;
-  callState.style.backgroundColor="honeydew";
+  document.getElementById('hangup').disabled = true;
+  document.getElementById('sharescreen').disabled = true;
+  document.querySelector('#mute').disabled = true;
+  callState.style.backgroundColor = 'honeydew';
 }
 
 function hangUpCall() {
   socket.send(
     JSON.stringify({
       token: call_token,
-      type: "hang-up"
+      type: 'hang-up',
     })
   );
   closeVideoCall();
@@ -679,78 +695,83 @@ function sharedScreen() {
   navigator.mediaDevices
     .getDisplayMedia({ cursor: true })
     .then((stream) => {
-      
       const screenTrack = stream.getTracks()[0];
       if (screenReplaceVideo) {
-        let originalStream = allMediaStreams.find((sender) => sender.videoId === 'local_video');
-        console.log("Original stream is: ")
+        let originalStream = allMediaStreams.find(
+          (sender) => sender.videoId === 'local_video'
+        );
+        console.log('Original stream is: ');
         console.log(originalStream);
         originalStream.senders
-        .find ((sender) => sender.track.kind === 'video')
-        .replaceTrack(screenTrack);
+          .find((sender) => sender.track.kind === 'video')
+          .replaceTrack(screenTrack);
 
         screenTrack.onended = function () {
-          let originalStream = allMediaStreams.find((sender) => sender.videoId === "local_video"); 
+          let originalStream = allMediaStreams.find(
+            (sender) => sender.videoId === 'local_video'
+          );
 
           let originalTrack = originalStream.mediaStream.getTracks()[1];
 
           originalStream.senders
-          .find((sender) => sender.track.kind === 'video')
-          .replaceTrack(originalTrack);
-
+            .find((sender) => sender.track.kind === 'video')
+            .replaceTrack(originalTrack);
         };
-      }
-
-      else {
+      } else {
         let screenSender;
-        stream.getTracks().forEach((track) => screenSender = peerConnection.addTrack(track, stream))
-        allMediaStreams.push({mediaStream: stream, videoId: "none"});
+        stream
+          .getTracks()
+          .forEach(
+            (track) => (screenSender = peerConnection.addTrack(track, stream))
+          );
+        allMediaStreams.push({ mediaStream: stream, videoId: 'none' });
         document.querySelector('#sharescreen').disabled = true;
         document.querySelector('#shareVideo').disabled = true;
 
         screenTrack.onended = function () {
           for (let i = 0; i < allMediaStreams.length; i++) {
-            if (allMediaStreams[i].videoId==="none") {
+            if (allMediaStreams[i].videoId === 'none') {
               allMediaStreams.splice(i, 1);
             }
           }
           peerConnection.removeTrack(screenSender);
           document.querySelector('#sharescreen').disabled = false;
           document.querySelector('#shareVideo').disabled = false;
-        }
+        };
       }
     })
     .catch(function (err) {
       log_error(err);
     });
-
 }
 
 function sharedVideo() {
   let myVideo = document.querySelector('#myVideo');
   myVideo.play();
-  myVideo.oncanplay = videoCreateStream; 
-  if(myVideo.readyState >=3) {
+  myVideo.oncanplay = videoCreateStream;
+  if (myVideo.readyState >= 3) {
     videoCreateStream();
   }
-} 
+}
 
 function videoCreateStream() {
-  let myVideoStream = allMediaStreams
-    .find((stream) => stream.videoId === 'myVideo');
-  if(myVideoStream) {
+  let myVideoStream = allMediaStreams.find(
+    (stream) => stream.videoId === 'myVideo'
+  );
+  if (myVideoStream) {
     return;
   }
-  
+
   let myVideo = document.querySelector('#myVideo');
   if (myVideo.captureStream) {
     myVideoStream = myVideo.captureStream();
     console.log('Capture stream from myVdeo' + myVideoStream);
     setupCaptureStream(myVideoStream);
-  }
-  else if (myVideo.mozCaptureStream) {
+  } else if (myVideo.mozCaptureStream) {
     myVideoStream = myVideo.mozCaptureStream();
-    console.log('Capture stream from myVdeo with mozCaptureStream()' + myVideoStream);
+    console.log(
+      'Capture stream from myVdeo with mozCaptureStream()' + myVideoStream
+    );
     setupCaptureStream(myVideoStream);
   } else {
     console.log('captureStream() not supported');
@@ -758,7 +779,6 @@ function videoCreateStream() {
 }
 
 function setupCaptureStream(myVideoStream) {
-
   const videoTracks = myVideoStream.getVideoTracks();
   const audioTracks = myVideoStream.getAudioTracks();
   // console.log(myVideoStream.getVideoTracks()[0]);
@@ -769,17 +789,24 @@ function setupCaptureStream(myVideoStream) {
   }
   if (audioTracks.length > 0) {
     console.log(`Using audio device: ${audioTracks[0].label}`);
-  } 
-
+  }
 
   let senderSharedVideo = [];
-  myVideoStream.getTracks().forEach(track => senderSharedVideo.push (peerConnection.addTrack(track, myVideoStream)));
+  myVideoStream
+    .getTracks()
+    .forEach((track) =>
+      senderSharedVideo.push(peerConnection.addTrack(track, myVideoStream))
+    );
 
-  allMediaStreams.push({mediaStream: myVideoStream, senders: senderSharedVideo, videoId: "myVideo"});
+  allMediaStreams.push({
+    mediaStream: myVideoStream,
+    senders: senderSharedVideo,
+    videoId: 'myVideo',
+  });
 
   // console.log("RTCRtpSender is: " + senderSharedVideo);
 
-  document.querySelector("#shareVideo").disabled = true;
+  document.querySelector('#shareVideo').disabled = true;
   if (!screenReplaceVideo) {
     document.querySelector('#sharescreen').disabled = true;
   }
@@ -791,52 +818,60 @@ function setupCaptureStream(myVideoStream) {
   hangupElement.parentNode.append(buttonElement);
   buttonElement.addEventListener('click', stopVideo);
 
-  // MediaStreamTrack.onended. 
+  // MediaStreamTrack.onended.
   videoTracks.onended = function () {
     for (let i = 0; i < allMediaStreams.length; i++) {
-      if (allMediaStreams[i].videoId === "myVideo") {
+      if (allMediaStreams[i].videoId === 'myVideo') {
         allMediaStreams.splice(i, 1);
       }
     }
     peerConnection.removeTrack(senderSharedVideo);
-    document.querySelector("#shareVideo").disabled = false;
+    document.querySelector('#shareVideo').disabled = false;
     document.querySelector('#sharescreen').disabled = false;
-  } 
+  };
 }
 
-function createVideoElement () {
+function createVideoElement() {
   let vid = document.createElement('video');
-  vid.id="myVideo";
+  vid.id = 'myVideo';
   vid.setAttribute('preload', 'metadata');
-  vid.setAttribute('poster', "http://localhost:8080/video/sintel.jpg");
-/*  vid.setAttribute('controls', true); */
+  vid.setAttribute('poster', 'http://localhost:8080/video/sintel.jpg');
+  /*  vid.setAttribute('controls', true); */
   vid.classList.add('smallVideoM');
 
   let local_video = document.querySelector('#local_video');
   local_video.parentNode.insertBefore(vid, local_video.nextSibling);
-  vid.innerHTML += '<source src="http://localhost:8080/video/sintel.mp4" type="video/mp4" />';
-  vid.innerHTML += '<source src="http://localhost:8080/video/sintel.webm" type="video/webm" />';
-  vid.innerHTML += '<track src="http://localhost:8080/video/sintel-captions.vtt" kind="captions" label="English Captions" default/>';
-  vid.innerHTML += '<track src="http://localhost:8080/video/sintel-descriptions.vtt" kind="descriptions" label="Audio Descriptions" />';
+  vid.innerHTML +=
+    '<source src="http://localhost:8080/video/sintel.mp4" type="video/mp4" />';
+  vid.innerHTML +=
+    '<source src="http://localhost:8080/video/sintel.webm" type="video/webm" />';
+  vid.innerHTML +=
+    '<track src="http://localhost:8080/video/sintel-captions.vtt" kind="captions" label="English Captions" default/>';
+  vid.innerHTML +=
+    '<track src="http://localhost:8080/video/sintel-descriptions.vtt" kind="descriptions" label="Audio Descriptions" />';
   vid.innerHTML += "Sorry, your browser doesn't support embedded videos.";
 
-  vid.addEventListener('dblclick', videoDblClick); 
+  vid.addEventListener('dblclick', videoDblClick);
 
   sharedVideo();
 }
 
-function stopVideo () {
-  let originalStream = allMediaStreams.find((sender) => sender.videoId === "myVideo"); 
+function stopVideo() {
+  let originalStream = allMediaStreams.find(
+    (sender) => sender.videoId === 'myVideo'
+  );
 
-  originalStream.senders.forEach((sender) => peerConnection.removeTrack(sender));
+  originalStream.senders.forEach((sender) =>
+    peerConnection.removeTrack(sender)
+  );
 
-  for (let i=0; i < allMediaStreams.length; i++) {
-    if(allMediaStreams[i].videoId === 'myVideo') {
+  for (let i = 0; i < allMediaStreams.length; i++) {
+    if (allMediaStreams[i].videoId === 'myVideo') {
       allMediaStreams.splice(i, 1);
     }
   }
-  
-  document.querySelector("#shareVideo").disabled = false;
+
+  document.querySelector('#shareVideo').disabled = false;
   document.querySelector('#sharescreen').disabled = false;
   document.querySelector('#stopVideo').remove();
   let video = document.querySelector('#myVideo');
@@ -846,7 +881,7 @@ function stopVideo () {
 function videoDblClick(event) {
   event.preventDefault();
   event.stopPropagation();
-  const t = event.target; 
+  const t = event.target;
   t.classList.toggle('fullScreen');
 }
 
@@ -855,7 +890,7 @@ function muteLocalVideo(event) {
   const t = event.target;
   t.classList.toggle('unmute');
   console.log('video is muted: ' + vid.muted);
-  if(vid.muted) {
+  if (vid.muted) {
     vid.muted = false;
   } else {
     vid.muted = true;
@@ -864,77 +899,74 @@ function muteLocalVideo(event) {
 
 function chatInput() {
   let send = document.querySelector('#send');
-  send.disabled = false; 
+  send.disabled = false;
 }
 
 function sendMessageChat() {
   let chatInput = document.querySelector('#chatInput');
   let send = document.querySelector('#send');
-  let date = new Date; 
-  date.toDateString(); 
-  var messageL = new Message ("local", chatInput.value, true, date);
-  messages.push (messageL);
+  let date = new Date();
+  date.toDateString();
+  var messageL = new Message('local', chatInput.value, true, date);
+  messages.push(messageL);
   console.log(messages.length);
   printMessage(canvas, ctx, messages);
   dataChannel.send(chatInput.value);
   send.disabled = true;
-  chatInput.value = "";
+  chatInput.value = '';
 }
 
-function printMessage (canvas, ctx, messages) {
+function printMessage(canvas, ctx, messages) {
   y = canvas.height - 40;
-  ctx.clearRect(0,0, canvas.width, canvas.height);
+  ctx.clearRect(0, 0, canvas.width, canvas.height);
   for (let i = messages.length; i > 0; i--) {
     ctx.font = '12px serif';
-    let currentMessage = messages[i-1];
-    if(currentMessage.fromMe) {
+    let currentMessage = messages[i - 1];
+    if (currentMessage.fromMe) {
       x = 30;
-      ctx.strokeStyle='rgb(33,33,33)';
-      ctx.fillStyle='rgb(113,240,245)';
-      ctx.lineWidth=1;
-      roundedRect(ctx,x-5,y-15,canvas.width-35,45,20,true,true);
-
-    }
-    else {
+      ctx.strokeStyle = 'rgb(33,33,33)';
+      ctx.fillStyle = 'rgb(113,240,245)';
+      ctx.lineWidth = 1;
+      roundedRect(ctx, x - 5, y - 15, canvas.width - 35, 45, 20, true, true);
+    } else {
       x = 10;
-      ctx.strokeStyle='rgb(33,33,33)';
-      ctx.fillStyle='rgb(107,232,169)';
-      ctx.lineWidth=1;
-      roundedRect(ctx,x-5,y-15,canvas.width-35,45,20,true,true);
+      ctx.strokeStyle = 'rgb(33,33,33)';
+      ctx.fillStyle = 'rgb(107,232,169)';
+      ctx.lineWidth = 1;
+      roundedRect(ctx, x - 5, y - 15, canvas.width - 35, 45, 20, true, true);
     }
 
-    ctx.fillStyle='rgb(33,33,33';
+    ctx.fillStyle = 'rgb(33,33,33';
     ctx.fillText(currentMessage.fromName.toString(), x, y);
     let dateTime = currentMessage.date.toString();
     dateTime += currentMessage.time.toString();
-    ctx.fillText(dateTime, x+100, y);
+    ctx.fillText(dateTime, x + 100, y);
     ctx.font = '14px serif';
-    ctx.fillText(currentMessage.message.toString(), x, y+15);
-    y-=50;
+    ctx.fillText(currentMessage.message.toString(), x, y + 15);
+    y -= 50;
   }
 }
 
-var roundedRect = function(ctx,x,y,width,height,radius,fill,stroke) {
+var roundedRect = function (ctx, x, y, width, height, radius, fill, stroke) {
   ctx.beginPath();
 
   // draw top and top right corner
-  ctx.moveTo(x+radius,y);
-  ctx.arcTo(x+width,y,x+width,y+radius,radius);
+  ctx.moveTo(x + radius, y);
+  ctx.arcTo(x + width, y, x + width, y + radius, radius);
 
   // draw right side and bottom right corner
-  ctx.arcTo(x+width,y+height,x+width-radius,y+height,radius); 
+  ctx.arcTo(x + width, y + height, x + width - radius, y + height, radius);
 
   // draw bottom and bottom left corner
-  ctx.arcTo(x,y+height,x,y+height-radius,radius);
+  ctx.arcTo(x, y + height, x, y + height - radius, radius);
 
   // draw left and top left corner
-  ctx.arcTo(x,y,x+radius,y,radius);
+  ctx.arcTo(x, y, x + radius, y, radius);
 
-  if(fill){
+  if (fill) {
     ctx.fill();
   }
-  if(stroke){
+  if (stroke) {
     ctx.stroke();
   }
-
-}
+};

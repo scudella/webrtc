@@ -34,7 +34,7 @@ http_server.on ('request', (request, response) => {
     readFiles(path, response);
   }
 
-  else if (request.url === '/') {
+  else if (request.url === '/' || request.url === '/index.html') {
     response.writeHead(200, {'content-type': 'text/html'})
     readhtml(response);
   }
