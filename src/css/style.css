@@ -17,7 +17,7 @@ body {
   margin-left: 0;
   margin-right: 0;
   padding: 0px;
-  font-family: "Arial", "Helvetica", sans-serif;
+  font-family: 'Arial', 'Helvetica', sans-serif;
   background-color: dimgray;
 }
 
@@ -29,7 +29,7 @@ header {
 
 nav {
   background: #fff;
-  box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);;
+  box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
 }
 .nav-header {
   display: flex;
@@ -67,7 +67,8 @@ nav {
   top: 0;
   width: 19rem;
   z-index: 990;
-  box-shadow: 0 4px 4px 0 rgb(60 64 67 / 30%), 0 8px 12px 6px rgb(60 64 67 / 15%);
+  box-shadow: 0 4px 4px 0 rgb(60 64 67 / 30%),
+    0 8px 12px 6px rgb(60 64 67 / 15%);
   transition: height 2s, width 2s;
 }
 .inner-menu {
@@ -90,13 +91,13 @@ nav {
   padding-left: 1rem;
   padding-right: 1rem;
   position: relative;
-  border: solid 1px #32a1ce ;;
+  border: solid 1px #32a1ce;
   border-radius: 0 2rem 2rem 0;
   margin-bottom: 0.5rem;
   min-width: 12rem;
 }
 .box-item {
-  background-color: rgba(26,115,232,0.122);
+  background-color: rgba(26, 115, 232, 0.122);
   bottom: 0;
   overflow: hidden;
   position: absolute;
@@ -135,8 +136,8 @@ nav {
   cursor: pointer;
 }
 .inner-text {
-  letter-spacing: .01785714em;
-  font-family: 'Google Sans',Roboto,Arial,sans-serif;
+  letter-spacing: 0.01785714em;
+  font-family: 'Google Sans', Roboto, Arial, sans-serif;
   font-size: 0.875rem;
   font-weight: 500;
   line-height: 1.25rem;
@@ -147,7 +148,6 @@ nav {
   display: block;
   cursor: pointer;
 }
-
 
 #local_video {
   margin-top: 20px;
@@ -171,17 +171,17 @@ nav {
   margin-left: 20px;
   order: -1;
   flex: 8 1 auto;
-  width:80%;
+  width: 80%;
 }
 .smallVideoM {
-  max-width:320px;
-  max-height:240px;
+  max-width: 320px;
+  max-height: 240px;
 }
 .smallVideoL {
   max-width: 320px;
-  min-width:80px;
-  max-height:240px;
-  min-height:60px;
+  min-width: 80px;
+  max-height: 240px;
+  min-height: 60px;
 }
 
 .smallVideoR {
@@ -201,12 +201,11 @@ nav {
 }
 
 .fullScreen {
-  max-width:800px;
-  max-height:420px;
+  max-width: 800px;
+  max-height: 420px;
 }
 
 #buttons {
-  background-color: brown;
   border: #333333 2px solid;
 }
 
@@ -223,7 +222,7 @@ nav {
   padding: 10px 10px;
 }
 .new-state {
-  background-color: aqua; 
+  background-color: aqua;
 }
 .checking-state {
   background-color: blue;
@@ -244,18 +243,18 @@ nav {
   background-color: lightgreen;
 }
 #call-state {
-  border: 2px solid black; 
+  border: 2px solid black;
   border-radius: 50%;
   padding: 20px 10px 20px 10px;
   text-align: center;
   text-decoration: none;
   font-size: 12px;
   margin: 4px 2px;
-  cursor: none; 
+  cursor: none;
 }
 
 #mute {
-  border: 2px solid black; 
+  border: 2px solid black;
   border-radius: 50%;
   padding: 20px 15px 20px 15px;
   text-align: center;
@@ -267,25 +266,26 @@ nav {
   background-color: darkred;
 }
 
-.unmute{
+.unmute {
   background-color: honeydew;
 }
 
-#givenToken, #url {
+#givenToken,
+#url {
   padding: 5px;
 }
 
 .container {
   display: grid;
 }
-.content, .overlay {
+.content,
+.overlay {
   grid-area: 1 / 1;
 }
 #chat {
-  
 }
 .chat {
-  border: double thick #32a1ce ;
+  border: double thick #32a1ce;
   border-radius: 5px;
   background-color: white;
   margin-top: 10px;
@@ -294,7 +294,6 @@ nav {
   margin-bottom: 0px;
 }
 #chatInput {
-
 }
 .chatInput {
   border: #32a1ce double thick;
@@ -323,7 +322,7 @@ nav {
   flex-flow: row wrap;
   justify-content: flex-start safe;
   align-items: flex-start;
-  align-content:flex-start;
+  align-content: flex-start;
 }
 
 header {
@@ -336,8 +335,9 @@ header {
 }
 
 footer {
+  background-color: hsl(205, 78%, 60%);
   box-sizing: border-box;
-  max-height:10rem;
+  max-height: 10rem;
   border: 0;
   max-width: 100vw;
   margin: 0;
@@ -345,8 +345,16 @@ footer {
 }
 /* ensure flex-container is always at least as tall as the viewport, 
 minus the height of the header and footer combined. */
-.fc { max-height: calc(100vh - 28rem); }
-.fc { width: calc(100vw - 24rem); }
+.fc {
+  max-height: calc(100vh - 28rem);
+}
+.fc {
+  width: calc(100vw - 24rem);
+}
 
-.sc { min-height: calc(100vh - 8rem); }
-.sc { max-width: 300px }
+.sc {
+  min-height: calc(100vh - 8rem);
+}
+.sc {
+  max-width: 300px;
+}

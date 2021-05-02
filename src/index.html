@@ -14,7 +14,7 @@ OF THIS SOFTWARE. -->
 <!DOCTYPE html>
 <html lang="en">
   <head>
-    <meta charset="UTF-8">
+    <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>WebRTC</title>
     <link
@@ -22,7 +22,7 @@ OF THIS SOFTWARE. -->
       href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.14.0/css/all.min.css"
     />
     <script src="js/webrtc.js"></script>
-    <link rel="stylesheet" href="css/style.css">
+    <link rel="stylesheet" href="css/style.css" />
   </head>
   <body>
     <header id="header">
@@ -43,92 +43,104 @@ OF THIS SOFTWARE. -->
       </div>
     </main>
     <aside class="sc">
-      <div class='container'>
-
-          <div class="content">
-            <div id='message' >
-              <canvas id="chat" class="chat" height="400" width="300">
-              </canvas>
-            </div>
-              <input type="text" id="chatInput" class="chatInput" placeholder="Type a message">
-              <button id='send' disabled>Send</button>
+      <div class="container">
+        <div class="content">
+          <div id="message">
+            <canvas id="chat" class="chat" height="400" width="300"> </canvas>
           </div>
+          <input
+            type="text"
+            id="chatInput"
+            class="chatInput"
+            placeholder="Type a message"
+          />
+          <button id="send" disabled>Send</button>
+        </div>
 
-          <div class="menu">
-            <div class="inner-menu">
+        <div class="menu">
+          <div class="inner-menu">
+            <button id="shareVideo" class="menu-item" disabled>
+              <div class="box-item">
+                <div class="inner-box-item"></div>
+              </div>
+              <div class="avatar">
+                <i class="fas fa-chevron-circle-right inner-avatar"></i>
+              </div>
+              <div class="text">
+                <div class="inner-text">Share Video</div>
+              </div>
+            </button>
 
-              <button id="shareVideo" class="menu-item" disabled>
-                <div class="box-item">
-                  <div class="inner-box-item">
-                  </div>
-                </div>
-                <div class="avatar">
-                  <i class="fas fa-chevron-circle-right inner-avatar"></i>
+            <button class="menu-item">
+              <div class="box-item">
+                <div class="inner-box-item"></div>
+              </div>
+              <div class="avatar">
+                <svg
+                  focusable="false"
+                  width="24"
+                  height="24"
+                  viewbox="0 0 24 24"
+                  class="inner-avatar"
+                >
+                  <path
+                    d="M15 8c0-1.42-.5-2.73-1.33-3.76.42-.14.86-.24 1.33-.24 2.21 0 4 1.79 4 4s-1.79 4-4 4c-.43 0-.84-.09-1.23-.21-.03-.01-.06-.02-.1-.03A5.98 5.98 0 0 0 15 8zm1.66 5.13C18.03 14.06 19 15.32 19 17v3h4v-3c0-2.18-3.58-3.47-6.34-3.87zM9 6c-1.1 0-2 .9-2 2s.9 2 2 2 2-.9 2-2-.9-2-2-2m0 9c-2.7 0-5.8 1.29-6 2.01V18h12v-1c-.2-.71-3.3-2-6-2M9 4c2.21 0 4 1.79 4 4s-1.79 4-4 4-4-1.79-4-4 1.79-4 4-4zm0 9c2.67 0 8 1.34 8 4v3H1v-3c0-2.66 5.33-4 8-4z"
+                  ></path>
+                </svg>
+              </div>
+              <div class="text">
+                <div class="inner-text">Chat</div>
+              </div>
+            </button>
 
-
-<!--                <svg focusable="false" width="24" height="24" viewbox="0 0 24 24"
-                    class="inner-avatar" >
-                    <path d="M19 4h-1V2h-2v2H8V2H6v2H5c-1.11 0-1.99.9-1.99 2L3 20a2 2 0 0 0 2 2h14c1.1 0 2-.9 2-2V6c0-1.1-.9-2-2-2zm0 16H5V9h14v11z"></path>
-                  </svg> -->
-                </div>
-                <div class="text">
-                  <div class="inner-text">Share Video</div>
-                </div>
-              </button>
-
-              <button class="menu-item">
-                <div class="box-item">
-                  <div class="inner-box-item">
-                  </div>
-                </div>
-                <div class="avatar">
-                <svg focusable="false" width="24" height="24" viewbox="0 0 24 24"
-                    class="inner-avatar" >
-                    <path d="M15 8c0-1.42-.5-2.73-1.33-3.76.42-.14.86-.24 1.33-.24 2.21 0 4 1.79 4 4s-1.79 4-4 4c-.43 0-.84-.09-1.23-.21-.03-.01-.06-.02-.1-.03A5.98 5.98 0 0 0 15 8zm1.66 5.13C18.03 14.06 19 15.32 19 17v3h4v-3c0-2.18-3.58-3.47-6.34-3.87zM9 6c-1.1 0-2 .9-2 2s.9 2 2 2 2-.9 2-2-.9-2-2-2m0 9c-2.7 0-5.8 1.29-6 2.01V18h12v-1c-.2-.71-3.3-2-6-2M9 4c2.21 0 4 1.79 4 4s-1.79 4-4 4-4-1.79-4-4 1.79-4 4-4zm0 9c2.67 0 8 1.34 8 4v3H1v-3c0-2.66 5.33-4 8-4z"></path>
-                  </svg>
-                </div>
-                <div class="text">
-                  <div class="inner-text">Chat</div>
-                </div>
-              </button>
-              
-              <button class="menu-item">
-                <div class="box-item">
-                  <div class="inner-box-item">
-                  </div>
-                </div>
-                <div class="avatar">
-                  <svg focusable="false" width="24" height="24" viewBox="0 0 24 24" 
-                  class="inner-avatar">
-                  <path d="M13.85 22.25h-3.7c-.74 0-1.36-.54-1.45-1.27l-.27-1.89c-.27-.14-.53-.29-.79-.46l-1.8.72c-.7.26-1.47-.03-1.81-.65L2.2 15.53c-.35-.66-.2-1.44.36-1.88l1.53-1.19c-.01-.15-.02-.3-.02-.46 0-.15.01-.31.02-.46l-1.52-1.19c-.59-.45-.74-1.26-.37-1.88l1.85-3.19c.34-.62 1.11-.9 1.79-.63l1.81.73c.26-.17.52-.32.78-.46l.27-1.91c.09-.7.71-1.25 1.44-1.25h3.7c.74 0 1.36.54 1.45 1.27l.27 1.89c.27.14.53.29.79.46l1.8-.72c.71-.26 1.48.03 1.82.65l1.84 3.18c.36.66.2 1.44-.36 1.88l-1.52 1.19c.01.15.02.3.02.46s-.01.31-.02.46l1.52 1.19c.56.45.72 1.23.37 1.86l-1.86 3.22c-.34.62-1.11.9-1.8.63l-1.8-.72c-.26.17-.52.32-.78.46l-.27 1.91c-.1.68-.72 1.22-1.46 1.22zm-3.23-2h2.76l.37-2.55.53-.22c.44-.18.88-.44 1.34-.78l.45-.34 2.38.96 1.38-2.4-2.03-1.58.07-.56c.03-.26.06-.51.06-.78s-.03-.53-.06-.78l-.07-.56 2.03-1.58-1.39-2.4-2.39.96-.45-.35c-.42-.32-.87-.58-1.33-.77l-.52-.22-.37-2.55h-2.76l-.37 2.55-.53.21c-.44.19-.88.44-1.34.79l-.45.33-2.38-.95-1.39 2.39 2.03 1.58-.07.56a7 7 0 0 0-.06.79c0 .26.02.53.06.78l.07.56-2.03 1.58 1.38 2.4 2.39-.96.45.35c.43.33.86.58 1.33.77l.53.22.38 2.55z"></path><circle cx="12" cy="12" r="3.5"></circle>
-                  </svg>
-                </div>
-                <div class="text">
-                  <div class="inner-text">Settings</div>
-                </div>
-              </button>
-
-            </div>
+            <button id="settings" class="menu-item">
+              <div class="box-item">
+                <div class="inner-box-item"></div>
+              </div>
+              <div class="avatar">
+                <svg
+                  focusable="false"
+                  width="24"
+                  height="24"
+                  viewBox="0 0 24 24"
+                  class="inner-avatar"
+                >
+                  <path
+                    d="M13.85 22.25h-3.7c-.74 0-1.36-.54-1.45-1.27l-.27-1.89c-.27-.14-.53-.29-.79-.46l-1.8.72c-.7.26-1.47-.03-1.81-.65L2.2 15.53c-.35-.66-.2-1.44.36-1.88l1.53-1.19c-.01-.15-.02-.3-.02-.46 0-.15.01-.31.02-.46l-1.52-1.19c-.59-.45-.74-1.26-.37-1.88l1.85-3.19c.34-.62 1.11-.9 1.79-.63l1.81.73c.26-.17.52-.32.78-.46l.27-1.91c.09-.7.71-1.25 1.44-1.25h3.7c.74 0 1.36.54 1.45 1.27l.27 1.89c.27.14.53.29.79.46l1.8-.72c.71-.26 1.48.03 1.82.65l1.84 3.18c.36.66.2 1.44-.36 1.88l-1.52 1.19c.01.15.02.3.02.46s-.01.31-.02.46l1.52 1.19c.56.45.72 1.23.37 1.86l-1.86 3.22c-.34.62-1.11.9-1.8.63l-1.8-.72c-.26.17-.52.32-.78.46l-.27 1.91c-.1.68-.72 1.22-1.46 1.22zm-3.23-2h2.76l.37-2.55.53-.22c.44-.18.88-.44 1.34-.78l.45-.34 2.38.96 1.38-2.4-2.03-1.58.07-.56c.03-.26.06-.51.06-.78s-.03-.53-.06-.78l-.07-.56 2.03-1.58-1.39-2.4-2.39.96-.45-.35c-.42-.32-.87-.58-1.33-.77l-.52-.22-.37-2.55h-2.76l-.37 2.55-.53.21c-.44.19-.88.44-1.34.79l-.45.33-2.38-.95-1.39 2.39 2.03 1.58-.07.56a7 7 0 0 0-.06.79c0 .26.02.53.06.78l.07.56-2.03 1.58 1.38 2.4 2.39-.96.45.35c.43.33.86.58 1.33.77l.53.22.38 2.55z"
+                  ></path>
+                  <circle cx="12" cy="12" r="3.5"></circle>
+                </svg>
+              </div>
+              <div class="text">
+                <div class="inner-text">Settings</div>
+              </div>
+            </button>
           </div>
-
+        </div>
       </div>
     </aside>
     <footer>
       <div id="buttons">
         <button id="startvideo">Start WebRTC</button>
-        <button id="mute" class='mute' disabled>Mute</button>
+        <button id="mute" class="mute" disabled>Mute</button>
         <button id="tokenGen">Gen</button>
         <label for="givenToken">
           <span>Token: </span>
-          <input type="text" name="givenToken" id="givenToken" maxlength="20" required>
+          <input
+            type="text"
+            name="givenToken"
+            id="givenToken"
+            maxlength="20"
+            required
+          />
         </label>
         <label for="url">
           <span>URL: </span>
-          <input type="text" name="url" id="url" maxlength="50" disabled>
+          <input type="text" name="url" id="url" maxlength="50" disabled />
         </label>
-        <button id="call-state" class="closed-state"> Status</button>
+        <button id="call-state" class="closed-state">Status</button>
         <button id="hangup" disabled>Hang-up</button>
-        <button id="sharescreen" disabled> Share Screen</button>
+        <button id="sharescreen" disabled>Share Screen</button>
       </div>
     </footer>
   </body>

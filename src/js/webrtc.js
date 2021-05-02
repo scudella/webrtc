@@ -23,7 +23,7 @@ var dataChannel = null;
 var messages = [];
 var allMediaStreams = [];
 var connection = [];
-var screenReplaceVideo = false;
+var screenReplaceVideo = localStorage.getItem('replace') === 'sameVideo';
 
 class PeerConnection {
   constructor(token, peerConnection, mediaStream) {
@@ -259,6 +259,11 @@ window.onload = function init() {
     },
     true
   );
+
+  var settings = document.getElementById('settings');
+  settings.addEventListener('click', () => {
+    document.location = 'http://localhost:8080/settings.html';
+  });
 
   var button = document.getElementById('startvideo');
   button.addEventListener('click', function () {
