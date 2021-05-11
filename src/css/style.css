@@ -199,18 +199,67 @@ nav {
   flex: 8 1 auto;
   width: 80%;
 }
+#shareVideo:disabled,
+#settings:disabled {
+  background-color: #fff;
+}
 
 .fullScreen {
   max-width: 800px;
   max-height: 420px;
 }
-
-#buttons {
+.footercontainer {
+  position: relative;
   border: #333333 2px solid;
+  height: 6rem;
+}
+.buttonsSvg {
+  margin: 0;
+  position: absolute;
+  bottom: 10px;
+}
+.buttons {
+  margin: 0;
+  position: absolute;
+  bottom: 20%;
+  left: 25rem;
 }
 
-#startvideo,
-#hangup,
+#startvideo {
+  border: 2px solid black;
+  border-radius: 50%;
+  padding: 5px 5px 5px 5px;
+  height: 60px;
+  width: 60px;
+  cursor: pointer;
+  position: absolute;
+  bottom: 10px;
+  left: 20px;
+}
+#toggleVideo {
+  border: 2px solid black;
+  border-radius: 50%;
+  padding: 5px 5px 5px 5px;
+  height: 60px;
+  width: 60px;
+  margin: 20px 10px 0px 15px;
+  cursor: pointer;
+  position: absolute;
+  left: 85px;
+  bottom: 10px;
+}
+#hangup {
+  border: 2px solid black;
+  border-radius: 50%;
+  padding: 5px 5px 5px 5px;
+  height: 60px;
+  width: 60px;
+  margin: 20px 10px 0px 15px;
+  cursor: pointer;
+  position: absolute;
+  left: 255px;
+  bottom: 7px;
+}
 #sharescreen,
 #tokenGen,
 #stopVideo {
@@ -218,7 +267,8 @@ nav {
   box-shadow: 2px gray;
   border-radius: 5px;
   background-color: honeydew;
-  margin: 10px;
+  margin-bottom: 10px;
+  margin-left: 10px;
   padding: 10px 10px;
 }
 .new-state {
@@ -246,26 +296,30 @@ nav {
   border: 2px solid black;
   border-radius: 50%;
   padding: 20px 10px 20px 10px;
-  text-align: center;
   text-decoration: none;
   font-size: 12px;
-  margin: 4px 2px;
   cursor: none;
 }
 
 #mute {
   border: 2px solid black;
   border-radius: 50%;
-  padding: 20px 15px 20px 15px;
+  padding: 5px 9px 5px 9px;
+  margin-left: 15px;
   text-align: center;
   text-decoration: none;
   font-size: 12px;
+  position: absolute;
+  left: 170px;
+  bottom: 8px;
 }
 
+.mic {
+  height: 40px;
+}
 .mute {
   background-color: darkred;
 }
-
 .unmute {
   background-color: honeydew;
 }
@@ -337,11 +391,7 @@ header {
 footer {
   background-color: hsl(205, 78%, 60%);
   box-sizing: border-box;
-  max-height: 10rem;
-  border: 0;
-  max-width: 100vw;
-  margin: 0;
-  bottom: 100vh;
+  max-height: 6rem;
 }
 /* ensure flex-container is always at least as tall as the viewport, 
 minus the height of the header and footer combined. */
@@ -353,7 +403,7 @@ minus the height of the header and footer combined. */
 }
 
 .sc {
-  min-height: calc(100vh - 8rem);
+  min-height: calc(100vh - 28rem);
 }
 .sc {
   max-width: 300px;

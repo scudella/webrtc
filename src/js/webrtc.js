@@ -16,6 +16,7 @@ var call_token;
 var socket;
 var peerConnection;
 var canvas;
+var virtualCanvas = null;
 var ctx;
 var x = 10,
   y = 10;
@@ -24,6 +25,8 @@ var messages = [];
 var allMediaStreams = [];
 var connection = [];
 var screenReplaceVideo = localStorage.getItem('replace') === 'sameVideo';
+let noVideoCall = false;
+let sharingScreen = false;
 
 class PeerConnection {
   constructor(token, peerConnection, mediaStream) {
@@ -133,13 +136,16 @@ window.onload = function init() {
   peerConnection.ontrack = function (event) {
     console.log('ontrack called. The event is:');
     console.log(event);
+    const track = event.track;
+    const type = track.kind;
+    // console.log(type);
+
     let remoteVideoCreated = allMediaStreams.find(
       (stream) => stream.videoId === 'remote_video'
     );
     let videoShare = allMediaStreams.find(
       (stream) => stream.videoId === 'video_share'
     );
-
     if (!remoteVideoCreated) {
       let remote_video = 'remote_video';
       remoteVideoCreated = createVideo(remote_video, event);
@@ -260,47 +266,145 @@ window.onload = function init() {
     true
   );
 
-  var settings = document.getElementById('settings');
+  let settings = document.getElementById('settings');
   settings.addEventListener('click', () => {
     document.location = 'http://localhost:8080/settings.html';
   });
 
-  var button = document.getElementById('startvideo');
-  button.addEventListener('click', function () {
-    button.disabled = true;
+  const constraint = {
+    audio: true,
+    video: true,
+  };
 
-    navigator.mediaDevices
-      .getUserMedia({
-        audio: true,
-        video: true,
-      })
-      .then(function (stream) {
-        var video = document.getElementById('local_video');
-        video.addEventListener('dblclick', videoDblClick);
-        video.srcObject = stream;
-        video.style.backgroundColor = 'transparent';
-        video.play();
+  const videoButton = document.getElementById('startvideo');
+  videoButton.addEventListener('click', videoCall);
 
-        if (screenReplaceVideo) {
-          let senders = [];
-          stream
-            .getTracks()
-            .forEach((track) =>
-              senders.push(peerConnection.addTrack(track, stream))
-            );
+  const toggleButton = document.getElementById('toggleVideo');
+  toggleButton.addEventListener('click', toggleVideo);
 
-          allMediaStreams.push({
-            mediaStream: stream,
-            senders: senders,
-            videoId: 'local_video',
+  function videoCall() {
+    startCall(constraint);
+  }
+
+  function toggleVideo() {
+    if (!noVideoCall) {
+      noVideoCall = true;
+      toggleButton.classList.toggle('mute');
+      let originalStream = null;
+      originalStream = allMediaStreams.find(
+        (sender) => sender.videoId === 'local_video'
+      );
+
+      if (originalStream) {
+        if (!virtualCanvas) {
+          let video = document.getElementById('local_video');
+          let width = video.videoWidth;
+          let height = video.videoHeight;
+          virtualCanvas = Object.assign(document.createElement('canvas'), {
+            width,
+            height,
           });
-        } else {
-          stream
-            .getTracks()
-            .forEach((track) => peerConnection.addTrack(track, stream));
-          allMediaStreams.push({ mediaStream: stream, videoId: 'local_video' });
+          virtualCanvas.getContext('2d').fillRect(0, 0, width, height);
+          let mediaSource = virtualCanvas.captureStream(10);
+          allMediaStreams.push({
+            mediaStream: mediaSource,
+            senders: originalStream.senders,
+            videoId: 'canvas',
+          });
+        }
+        if (!sharingScreen) {
+          let canvasStream = allMediaStreams.find(
+            (sender) => sender.videoId === 'canvas'
+          );
+          canvasStream.senders
+            .find((sender) => sender.track.kind === 'video')
+            .replaceTrack(canvasStream.mediaStream.getVideoTracks()[0]);
         }
 
+        setTimeout(drawCanvas, 500);
+      }
+    } else {
+      noVideoCall = false;
+      toggleButton.classList.toggle('mute');
+      let originalStream = null;
+      originalStream = allMediaStreams.find(
+        (sender) => sender.videoId === 'local_video'
+      );
+
+      if (originalStream) {
+        if (!sharingScreen) {
+          let originalTrack = originalStream.mediaStream.getTracks()[1];
+
+          originalStream.senders
+            .find((sender) => sender.track.kind === 'video')
+            .replaceTrack(originalTrack);
+        }
+      }
+    }
+  }
+
+  function startCall(constraint) {
+    document.getElementById('startvideo').disabled = true;
+    document.getElementById('toggleVideo').disabled = true;
+    document.getElementById('settings').disabled = true;
+    navigator.mediaDevices
+      .getUserMedia(constraint)
+      .then(function (stream) {
+        stream.getAudioTracks()[0].enabled = false;
+        let video = document.getElementById('local_video');
+        video.addEventListener('dblclick', videoDblClick);
+        video.style.backgroundColor = 'transparent';
+        video.srcObject = stream;
+        video.play();
+
+        let senders = [];
+        stream
+          .getTracks()
+          .forEach((track) =>
+            senders.push(peerConnection.addTrack(track, stream))
+          );
+
+        allMediaStreams.push({
+          mediaStream: stream,
+          senders: senders,
+          videoId: 'local_video',
+        });
+
+        if (noVideoCall) {
+          video.oncanplay = canvasCreateStream;
+        }
+        function canvasCreateStream() {
+          let width = video.videoWidth;
+          let height = video.videoHeight;
+          virtualCanvas = Object.assign(document.createElement('canvas'), {
+            width,
+            height,
+          });
+          console.log(`width: ${width}, height: ${height}`);
+          virtualCanvas.getContext('2d').fillRect(0, 0, width, height);
+          let mediaSource = virtualCanvas.captureStream();
+          let blackVideoTrack = mediaSource.getVideoTracks()[0];
+          console.log('black video track:');
+          console.log(blackVideoTrack);
+          let noVideoStream = allMediaStreams.find(
+            (sender) => sender.videoId === 'local_video'
+          );
+          allMediaStreams.push({
+            mediaStream: mediaSource,
+            senders: noVideoStream.senders,
+            videoId: 'canvas',
+          });
+          console.log('noVideoStream stream is: ');
+          console.log(noVideoStream);
+          noVideoStream.senders
+            .find((sender) => sender.track.kind === 'video')
+            .replaceTrack(blackVideoTrack);
+          document.getElementById('toggleVideo').disabled = false;
+          setTimeout(drawCanvas, 100);
+          virtualCanvas.getContext('2d').fillRect(0, 0, width, height);
+        }
+
+        document.getElementById('toggleVideo').disabled = false;
         let mute = document.querySelector('#mute');
         mute.addEventListener('click', muteLocalVideo);
 
@@ -427,10 +531,35 @@ window.onload = function init() {
         }
       })
       .catch(handleGetUserMediaError);
-  });
+  }
 };
 
 /* functions used above are defined below */
+
+function drawCanvas() {
+  let ctx = virtualCanvas.getContext('2d');
+  ctx.save();
+  ctx.fillStyle = 'rgb(21,14,86)';
+  let video = document.querySelector('#local_video');
+  let width = video.videoWidth;
+  let height = video.videoHeight;
+  ctx.clearRect(0, 0, width, height);
+  ctx.fillRect(0, 0, width, height);
+  let login = localStorage.getItem('login');
+  let char;
+  if (login != '') {
+    ctx.beginPath();
+    ctx.fillStyle = 'rgb(255, 205, 0)';
+    ctx.arc(width / 2, height / 2, 100, 0, Math.PI * 2, true);
+    ctx.fill();
+    char = login.charAt(0);
+    ctx.font = '130px serif';
+    ctx.fillStyle = 'rgb(21, 14, 86)';
+    ctx.fillText(char.toUpperCase(), width / 2 - 25, height / 2 + 25);
+  }
+  ctx.restore();
+  setTimeout(drawCanvas, 100);
+}
 
 function processGen() {
   const givenToken = document.querySelector('#givenToken');
@@ -596,7 +725,7 @@ function createVideo(videoid, event) {
   vid.id = videoid;
   vid.className = 'smallVideoR';
   vid.setAttribute('autoplay', true);
-  /*  vid.setAttribute('controls', true); */
+  // vid.setAttribute('controls', true);
   console.log(vid);
 
   let local_video = document.querySelector('#local_video');
@@ -645,6 +774,7 @@ function checkRemoveTrack() {
 }
 
 function closeVideoCall() {
+  console.log('Closing Video Call');
   const remoteVideo = document.getElementById('remote_video');
   const localVideo = document.getElementById('local_video');
   const callState = document.querySelector('#call-state');
@@ -659,10 +789,12 @@ function closeVideoCall() {
     peerConnection.onicegatheringstatechange = null;
     peerConnection.onnegotiationneeded = null;
 
-    if (remoteVideo.srcObject) {
+    if (remoteVideo && remoteVideo.srcObject) {
       remoteVideo.srcObject.getTracks().forEach((track) => track.stop());
       remoteVideo.srcObject = null;
       remoteVideo.style.backgroundColor = '#333333';
+      remoteVideo.removeAttribute('src');
+      remoteVideo.removeAttribute('srcObject');
     }
 
     if (localVideo.srcObject) {
@@ -675,10 +807,7 @@ function closeVideoCall() {
     peerConnection = null;
   }
 
-  remoteVideo.removeAttribute('src');
-  remoteVideo.removeAttribute('srcObject');
   localVideo.removeAttribute('src');
-  remoteVideo.removeAttribute('srcObject');
 
   document.getElementById('hangup').disabled = true;
   document.getElementById('sharescreen').disabled = true;
@@ -702,6 +831,7 @@ function sharedScreen() {
     .then((stream) => {
       const screenTrack = stream.getTracks()[0];
       if (screenReplaceVideo) {
+        sharingScreen = true;
         let originalStream = allMediaStreams.find(
           (sender) => sender.videoId === 'local_video'
         );
@@ -712,15 +842,27 @@ function sharedScreen() {
           .replaceTrack(screenTrack);
 
         screenTrack.onended = function () {
-          let originalStream = allMediaStreams.find(
-            (sender) => sender.videoId === 'local_video'
-          );
+          sharingScreen = false;
+          if (noVideoCall) {
+            let originalStream = allMediaStreams.find(
+              (sender) => sender.videoId === 'canvas'
+            );
+            let originalTrack = originalStream.mediaStream.getTracks()[0];
 
-          let originalTrack = originalStream.mediaStream.getTracks()[1];
+            originalStream.senders
+              .find((sender) => sender.track.kind === 'video')
+              .replaceTrack(originalTrack);
+          } else {
+            let originalStream = allMediaStreams.find(
+              (sender) => sender.videoId === 'local_video'
+            );
 
-          originalStream.senders
-            .find((sender) => sender.track.kind === 'video')
-            .replaceTrack(originalTrack);
+            let originalTrack = originalStream.mediaStream.getTracks()[1];
+
+            originalStream.senders
+              .find((sender) => sender.track.kind === 'video')
+              .replaceTrack(originalTrack);
+          }
         };
       } else {
         let screenSender;
@@ -750,20 +892,12 @@ function sharedScreen() {
     });
 }
 
-function sharedVideo() {
-  let myVideo = document.querySelector('#myVideo');
-  myVideo.play();
-  myVideo.oncanplay = videoCreateStream;
-  if (myVideo.readyState >= 3) {
-    videoCreateStream();
-  }
-}
-
 function videoCreateStream() {
   let myVideoStream = allMediaStreams.find(
     (stream) => stream.videoId === 'myVideo'
   );
   if (myVideoStream) {
+    alert('MyVideo already exist!!!');
     return;
   }
 
@@ -811,16 +945,11 @@ function setupCaptureStream(myVideoStream) {
 
   // console.log("RTCRtpSender is: " + senderSharedVideo);
 
-  document.querySelector('#shareVideo').disabled = true;
-  if (!screenReplaceVideo) {
-    document.querySelector('#sharescreen').disabled = true;
-  }
-
   let buttonElement = document.createElement('button');
   buttonElement.textContent = 'Stop Video Share';
   buttonElement.id = 'stopVideo';
-  let hangupElement = document.querySelector('#hangup');
-  hangupElement.parentNode.append(buttonElement);
+  let shareScreenElement = document.querySelector('#sharescreen');
+  shareScreenElement.parentNode.append(buttonElement);
   buttonElement.addEventListener('click', stopVideo);
 
   // MediaStreamTrack.onended.
@@ -839,13 +968,12 @@ function setupCaptureStream(myVideoStream) {
 function createVideoElement() {
   let vid = document.createElement('video');
   vid.id = 'myVideo';
-  vid.setAttribute('preload', 'metadata');
+  vid.setAttribute('preload', 'auto');
   vid.setAttribute('poster', 'http://localhost:8080/video/sintel.jpg');
-  /*  vid.setAttribute('controls', true); */
+  vid.setAttribute('controls', true);
   vid.classList.add('smallVideoM');
 
   let local_video = document.querySelector('#local_video');
-  local_video.parentNode.insertBefore(vid, local_video.nextSibling);
   vid.innerHTML +=
     '<source src="http://localhost:8080/video/sintel.mp4" type="video/mp4" />';
   vid.innerHTML +=
@@ -858,7 +986,18 @@ function createVideoElement() {
 
   vid.addEventListener('dblclick', videoDblClick);
 
-  sharedVideo();
+  document.querySelector('#shareVideo').disabled = true;
+  if (!screenReplaceVideo) {
+    document.querySelector('#sharescreen').disabled = true;
+  }
+
+  local_video.parentNode.insertBefore(vid, local_video.nextSibling);
+  let myVideo = document.querySelector('#myVideo');
+  myVideo.play();
+  myVideo.oncanplay = videoCreateStream;
+  if (myVideo.readyState >= 2) {
+    videoCreateStream();
+  }
 }
 
 function stopVideo() {
@@ -892,14 +1031,33 @@ function videoDblClick(event) {
 
 function muteLocalVideo(event) {
   const vid = document.querySelector('#local_video');
+  const mediaStream = allMediaStreams.find(
+    (stream) => stream.videoId === 'local_video'
+  );
+
   const t = event.target;
-  t.classList.toggle('unmute');
-  console.log('video is muted: ' + vid.muted);
+  // console.log(t.nodeName, t.parentNode);
+  if (t.nodeName === 'IMG') {
+    t.parentNode.classList.toggle('unmute');
+  } else {
+    t.classList.toggle('unmute');
+  }
   if (vid.muted) {
     vid.muted = false;
+    mediaStream.senders.map((sender) => {
+      if (sender.track.kind === 'audio') {
+        sender.track.enabled = true;
+      }
+    });
   } else {
     vid.muted = true;
+    mediaStream.senders.map((sender) => {
+      if (sender.track.kind === 'audio') {
+        sender.track.enabled = false;
+      }
+    });
   }
+  // console.log(`Local video is muted: ${vid.muted}`);
 }
 
 function chatInput() {
