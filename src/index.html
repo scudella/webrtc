@@ -21,7 +21,8 @@ OF THIS SOFTWARE. -->
       rel="stylesheet"
       href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.14.0/css/all.min.css"
     />
-    <script src="js/webrtc.js"></script>
+    <script type="module" src="js/webrtc.js"></script>
+    <script type="module" src="js/chat.js"></script>
     <link rel="stylesheet" href="css/style.css" />
   </head>
   <body>
@@ -45,17 +46,9 @@ OF THIS SOFTWARE. -->
     <aside class="sc">
       <div class="container">
         <div class="content">
-          <div id="message">
-            <canvas id="chat" class="chat" height="380" width="300"> </canvas>
-          </div>
-          <input
-            type="text"
-            id="chatInput"
-            class="chatInput"
-            placeholder="Type a message"
-          />
-          <button id="send" disabled>Send</button>
+          <div id="message"></div>
         </div>
+        <div id="inputSend"></div>
 
         <div class="menu">
           <div class="inner-menu">
@@ -71,7 +64,7 @@ OF THIS SOFTWARE. -->
               </div>
             </button>
 
-            <button class="menu-item">
+            <button id="canvasChat" class="menu-item" disabled>
               <div class="box-item">
                 <div class="inner-box-item"></div>
               </div>
@@ -99,43 +92,45 @@ OF THIS SOFTWARE. -->
       </div>
     </aside>
     <footer>
-      <div class="footercontainer">
-        <div class="buttonsSvg">
-          <button id="startvideo">
-            <img src="images/play-svgrepo-com.svg" alt="Start Button" />
-          </button>
-          <button id="toggleVideo">
-            <img src="images/camera.svg" alt="No video Button" />
-          </button>
-          <button id="mute" class="mute" disabled>
-            <img
-              class="mic"
-              src="images/voice-microphone-svgrepo-com.svg"
-              alt="Mute button"
-            />
-          </button>
-          <button id="hangup" disabled>
-            <img src="images/hangup.svg" alt="Hang-up button" />
-          </button>
-        </div>
-        <div class="buttons">
-          <button id="tokenGen">Gen</button>
-          <label for="givenToken">
-            <span>Token: </span>
-            <input
-              type="text"
-              name="givenToken"
-              id="givenToken"
-              maxlength="20"
-              required
-            />
-          </label>
-          <label for="url">
-            <span>URL: </span>
-            <input type="text" name="url" id="url" maxlength="50" disabled />
-          </label>
-          <button id="call-state" class="closed-state">Status</button>
-          <button id="sharescreen" disabled>Share Screen</button>
+      <div class="footerPosition">
+        <div class="footercontainer">
+          <div class="buttonsSvg">
+            <button id="startvideo">
+              <img src="images/play-svgrepo-com.svg" alt="Start Button" />
+            </button>
+            <button id="toggleVideo">
+              <img src="images/camera.svg" alt="No video Button" />
+            </button>
+            <button id="mute" class="mute" disabled>
+              <img
+                class="mic"
+                src="images/voice-microphone-svgrepo-com.svg"
+                alt="Mute button"
+              />
+            </button>
+            <button id="hangup" disabled>
+              <img src="images/hangup.svg" alt="Hang-up button" />
+            </button>
+          </div>
+          <div class="buttons">
+            <button id="tokenGen">Gen</button>
+            <label for="givenToken">
+              <span>Token: </span>
+              <input
+                type="text"
+                name="givenToken"
+                id="givenToken"
+                maxlength="20"
+                required
+              />
+            </label>
+            <label for="url">
+              <span>URL: </span>
+              <input type="text" name="url" id="url" maxlength="50" disabled />
+            </label>
+            <button id="call-state" class="closed-state">Status</button>
+            <button id="sharescreen" disabled>Share Screen</button>
+          </div>
         </div>
       </div>
     </footer>

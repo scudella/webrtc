@@ -12,16 +12,17 @@ NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF OR IN CONNECTION WITH THE US
 OF THIS SOFTWARE.
 */
 
+import {
+  setDataChannel,
+  onDataChannel,
+  dataChannel,
+  toggleCanvasChat,
+} from './chat.js';
+
 var call_token;
 var socket;
 var peerConnection;
-var canvas;
 var virtualCanvas = null;
-var ctx;
-var x = 10,
-  y = 10;
-var dataChannel = null;
-var messages = [];
 var allMediaStreams = [];
 var connection = [];
 var screenReplaceVideo = localStorage.getItem('replace') === 'sameVideo';
@@ -36,58 +37,9 @@ class PeerConnection {
   }
 }
 
-class Message {
-  constructor(fromName, message, fromMe, date) {
-    this._fromName = fromName;
-    this._message = message;
-    this._fromMe = fromMe;
-    this._date = date;
-  }
-
-  get fromName() {
-    return this._fromName;
-  }
-
-  set fromName(newFromName) {
-    this._fromName = newFromName;
-  }
-  get message() {
-    return this._message;
-  }
-
-  set message(newMessage) {
-    this._message = newMessage;
-  }
-
-  get fromMe() {
-    return this._fromMe;
-  }
-
-  set self(newFromMe) {
-    this._fromMe = newFromMe;
-  }
-
-  set date(date) {
-    this._date = date;
-  }
-
-  get date() {
-    let newDate = new Date();
-    return newDate.toDateString();
-  }
-
-  get time() {
-    let newTime = new Date();
-    return newTime.toLocaleString().slice(9);
-  }
-}
-
 window.onload = function init() {
   const tokenGen = document.querySelector('#tokenGen');
   tokenGen.addEventListener('click', processGen);
-
-  canvas = document.querySelector('#chat');
-  ctx = canvas.getContext('2d');
 
   let configuration = {
     iceservers: [{ urls: 'stun:stun.l.google.com:19302' }],
@@ -129,7 +81,7 @@ window.onload = function init() {
         );
       }
     } catch (err) {
-      console.error(err);
+      log_error(err);
     }
   };
 
@@ -148,36 +100,48 @@ window.onload = function init() {
     );
     if (!remoteVideoCreated) {
       let remote_video = 'remote_video';
+
+      // Create remote video from peer
       remoteVideoCreated = createVideo(remote_video, event);
+
+      // Save mediaStream from remote
       allMediaStreams.push({
         mediaStream: remoteVideoCreated,
         videoId: 'remote_video',
       });
 
+      // Enable hangup button
       let hangup = document.getElementById('hangup');
       hangup.disabled = false;
       hangup.addEventListener('click', hangUpCall);
 
+      // Enable mute button
       let mute = document.querySelector('#mute');
       mute.disabled = false;
 
+      // Allow video to be shared with remote
       let shareVideo = document.querySelector('#shareVideo');
       shareVideo.disabled = false;
       shareVideo.addEventListener('click', createVideoElement);
 
+      // Allow screen to be shared with remote
       let shareScreen = document.getElementById('sharescreen');
       shareScreen.disabled = false;
       shareScreen.addEventListener('click', sharedScreen);
 
-      let chat = document.querySelector('#chatInput');
-      chat.addEventListener('input', chatInput);
+      // Enable canvas message to be selected
+      let canvasChat = document.getElementById('canvasChat');
+      canvasChat.disabled = false;
+      canvasChat.addEventListener('click', toggleCanvasChat);
 
-      let sendMessage = document.querySelector('#send');
-      sendMessage.addEventListener('click', sendMessageChat);
+      // Remote video has additional streams to add
     } else if (remoteVideoCreated.mediaStream.id === event.streams[0].id) {
       document.querySelector('#remote_video').srcObject = event.streams[0];
       receivers = peerConnection.getReceivers();
       // console.log(receivers);
+
+      // If on track is not from remote video camera it should be from a video
+      // or screen sharing
     } else if (!videoShare) {
       let video_share = 'video_share';
       videoShare = createVideo(video_share, event);
@@ -191,8 +155,12 @@ window.onload = function init() {
       }
       // Check for tracks removed
       setTimeout(checkRemoveTrack, 1000);
+
+      // video or screen sharing has additional tracks to add
     } else if (videoShare.mediaStream.id === event.streams[0].id) {
       document.querySelector('#video_share').srcObject = event.streams[0];
+
+      // track not related with remote camera or video/screen sharing
     } else {
       console.log('ontrack received, but not handled:');
       console.log(event.streams[0].id);
@@ -447,22 +415,7 @@ window.onload = function init() {
           // Caller leg
 
           if (dataChannel === null) {
-            dataChannel = peerConnection.createDataChannel('chat');
-            console.log('data channel created ');
-            console.log(dataChannel);
-
-            dataChannel.onopen = function () {
-              console.log('Caller data channel opened');
-            };
-
-            dataChannel.onmessage = function (event) {
-              let date = new Date();
-              date.toDateString();
-              var messageR = new Message('Remote', event.data, false, date);
-              messages.push(messageR);
-              console.log(messages.length);
-              printMessage(canvas, ctx, messages);
-            };
+            setDataChannel();
           }
 
           const givenToken = document.querySelector('#givenToken');
@@ -504,21 +457,8 @@ window.onload = function init() {
         } else {
           // Callee Leg
 
-          peerConnection.ondatachannel = function (event) {
-            dataChannel = event.channel;
-            dataChannel.onopen = function () {
-              console.log('Data channel opened');
-            };
-
-            dataChannel.onmessage = function (event) {
-              let date = new Date();
-              date.toDateString();
-              var messageR = new Message('Remote', event.data, false, date);
-              messages.push(messageR);
-              console.log(messages.length);
-              printMessage(canvas, ctx, messages);
-            };
-          };
+          // Set listeners for data channel
+          peerConnection.ondatachannel = onDataChannel;
 
           const givenToken = document.querySelector('#givenToken');
           document.querySelector('#tokenGen').disabled = true;
@@ -1091,7 +1031,7 @@ function checkSharing() {
         .catch(function (error) {
           // Automatic playback failed.
           console.log('automatic playblack failed');
-          console.log(error);
+          log_error(error);
         });
     }
   }
@@ -1167,76 +1107,4 @@ function muteLocalVideo(event) {
   // console.log(`Local video is muted: ${vid.muted}`);
 }
 
-function chatInput() {
-  let send = document.querySelector('#send');
-  send.disabled = false;
-}
-
-function sendMessageChat() {
-  let chatInput = document.querySelector('#chatInput');
-  let send = document.querySelector('#send');
-  let date = new Date();
-  date.toDateString();
-  var messageL = new Message('local', chatInput.value, true, date);
-  messages.push(messageL);
-  // console.log(messages.length);
-  printMessage(canvas, ctx, messages);
-  dataChannel.send(chatInput.value);
-  send.disabled = true;
-  chatInput.value = '';
-}
-
-function printMessage(canvas, ctx, messages) {
-  y = canvas.height - 40;
-  ctx.clearRect(0, 0, canvas.width, canvas.height);
-  for (let i = messages.length; i > 0; i--) {
-    ctx.font = '12px serif';
-    let currentMessage = messages[i - 1];
-    if (currentMessage.fromMe) {
-      x = 30;
-      ctx.strokeStyle = 'rgb(33,33,33)';
-      ctx.fillStyle = 'rgb(113,240,245)';
-      ctx.lineWidth = 1;
-      roundedRect(ctx, x - 5, y - 15, canvas.width - 35, 45, 20, true, true);
-    } else {
-      x = 10;
-      ctx.strokeStyle = 'rgb(33,33,33)';
-      ctx.fillStyle = 'rgb(107,232,169)';
-      ctx.lineWidth = 1;
-      roundedRect(ctx, x - 5, y - 15, canvas.width - 35, 45, 20, true, true);
-    }
-
-    ctx.fillStyle = 'rgb(33,33,33';
-    ctx.fillText(currentMessage.fromName.toString(), x, y);
-    let dateTime = currentMessage.date.toString();
-    dateTime += currentMessage.time.toString();
-    ctx.fillText(dateTime, x + 100, y);
-    ctx.font = '14px serif';
-    ctx.fillText(currentMessage.message.toString(), x, y + 15);
-    y -= 50;
-  }
-}
-
-var roundedRect = function (ctx, x, y, width, height, radius, fill, stroke) {
-  ctx.beginPath();
-
-  // draw top and top right corner
-  ctx.moveTo(x + radius, y);
-  ctx.arcTo(x + width, y, x + width, y + radius, radius);
-
-  // draw right side and bottom right corner
-  ctx.arcTo(x + width, y + height, x + width - radius, y + height, radius);
-
-  // draw bottom and bottom left corner
-  ctx.arcTo(x, y + height, x, y + height - radius, radius);
-
-  // draw left and top left corner
-  ctx.arcTo(x, y, x + radius, y, radius);
-
-  if (fill) {
-    ctx.fill();
-  }
-  if (stroke) {
-    ctx.stroke();
-  }
-};
+export { peerConnection };
