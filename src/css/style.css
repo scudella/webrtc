@@ -346,48 +346,6 @@ footer {
   padding: 5px;
 }
 
-.container {
-  display: grid;
-}
-.content,
-.overlay {
-  grid-area: 1 / 1;
-}
-#chat {
-}
-.chat {
-  border: double thick #32a1ce;
-  border-radius: 5px;
-  background-color: white;
-  margin-top: 10px;
-  margin-right: 10px;
-  margin-left: 10px;
-  margin-bottom: 0px;
-}
-#chatInput {
-}
-.chatInput {
-  border: #32a1ce double thick;
-  border-radius: 5px;
-  background-color: white;
-  margin-top: 0;
-  margin-right: 5px;
-  margin-left: 10px;
-  margin-bottom: 5px;
-}
-
-#send {
-  border: 2px black solid;
-  box-shadow: 2px gray;
-  border-radius: 5px;
-  background-color: honeydew;
-  margin-top: 0;
-  margin-right: 10px;
-  margin-left: 5px;
-  margin-bottom: 0px;
-  padding: 10px 10px;
-}
-
 .fc {
   display: flex;
   flex-flow: row wrap;
@@ -417,11 +375,4 @@ minus the height of the header and footer combined. */
 }
 .fc {
   width: calc(100vw - 24rem);
-}
-
-.sc {
-  min-height: calc(100vh - 28rem);
-}
-.sc {
-  max-width: 300px;
 }

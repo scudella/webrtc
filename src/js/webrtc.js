@@ -28,6 +28,7 @@ var connection = [];
 var screenReplaceVideo = localStorage.getItem('replace') === 'sameVideo';
 let noVideoCall = false;
 let sharingScreen = false;
+let partySide = '';
 
 class PeerConnection {
   constructor(token, peerConnection, mediaStream) {
@@ -413,6 +414,7 @@ window.onload = function init() {
           document.location.hash === undefined
         ) {
           // Caller leg
+          partySide = 'caller';
 
           if (dataChannel === null) {
             setDataChannel();
@@ -456,7 +458,7 @@ window.onload = function init() {
           url.value = document.location;
         } else {
           // Callee Leg
-
+          partySide = 'callee';
           // Set listeners for data channel
           peerConnection.ondatachannel = onDataChannel;
 
@@ -542,8 +544,7 @@ function handleGetUserMediaError(e) {
   switch (e.name) {
     case 'NotFoundError':
       alert(
-        'Unable to open your call because no camera and/or microphone' +
-          'were found.'
+        'Unable to open your call because no camera and/or microphone were found.'
       );
       break;
     case 'SecurityError':
@@ -1107,4 +1108,4 @@ function muteLocalVideo(event) {
   // console.log(`Local video is muted: ${vid.muted}`);
 }
 
-export { peerConnection };
+export { peerConnection, call_token as token, partySide };
