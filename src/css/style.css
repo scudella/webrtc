@@ -377,3 +377,6 @@ minus the height of the header and footer combined. */
 .fc {
   width: calc(100vw - 24rem);
 }
+.fcNoChat {
+  width: 100vw;
+}

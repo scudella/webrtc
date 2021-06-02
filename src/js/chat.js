@@ -39,11 +39,13 @@ function toggleCanvasChat() {
   // draw canvas
   if (!toggleCanvas) {
     toggleCanvas = true;
+    // decrease width for videos
+    let videoContainer = document.getElementById('videoContainer');
+    videoContainer.classList.remove('fcNoChat');
     // create element and attributes
     let canvasElement = document.createElement('canvas');
     canvasElement.id = 'chat';
     canvasElement.className = 'chat';
-    // canvasElement.classList.add('item-canvas');
     canvasElement.setAttribute('height', '410');
     canvasElement.setAttribute('width', '330');
 
@@ -140,6 +142,9 @@ function toggleCanvasChat() {
     let slider = document.getElementById('slider');
     slider.removeEventListener('input', slideMessage);
     slider.remove();
+    // increase width for videos
+    let videoContainer = document.getElementById('videoContainer');
+    videoContainer.classList.add('fcNoChat');
   }
 }
 
