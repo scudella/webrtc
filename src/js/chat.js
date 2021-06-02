@@ -44,7 +44,7 @@ function toggleCanvasChat() {
     canvasElement.id = 'chat';
     canvasElement.className = 'chat';
     // canvasElement.classList.add('item-canvas');
-    canvasElement.setAttribute('height', '440');
+    canvasElement.setAttribute('height', '410');
     canvasElement.setAttribute('width', '330');
 
     // insert at message id div
@@ -91,6 +91,20 @@ function toggleCanvasChat() {
     let sendMessage = document.querySelector('#send');
     sendMessage.addEventListener('click', sendMessageChat);
 
+    // Create input type range
+    let sliderMsg = document.getElementById('sliderMsg');
+    sliderMsg.className = 'item-scroll';
+    let slider = document.createElement('input');
+    slider.id = 'slider';
+    slider.setAttribute('type', 'range');
+    slider.setAttribute('min', '1');
+    slider.setAttribute('max', '10');
+    slider.setAttribute('step', '1');
+    slider.setAttribute('value', '1');
+    let sliderWrapper = document.getElementById('sliderWrapper');
+    sliderWrapper.append(slider);
+    slider.addEventListener('input', slideMessage);
+
     canvas = document.querySelector('#chat');
     ctx = canvas.getContext('2d');
 
@@ -101,7 +115,8 @@ function toggleCanvasChat() {
     }
     // Check if there is any message already sent
     // If the database is open it will be printed here.
-    printMessage(canvas, ctx, messages);
+    printMessage(canvas, ctx, messages, 1);
+    slider.setAttribute('max', messages.length);
   }
 
   // destroy canvas
@@ -121,6 +136,10 @@ function toggleCanvasChat() {
     sendButton.textContent = '';
     sendButton.removeEventListener('click', sendMessageChat);
     sendButton.remove();
+
+    let slider = document.getElementById('slider');
+    slider.removeEventListener('input', slideMessage);
+    slider.remove();
   }
 }
 
@@ -184,7 +203,10 @@ function receiveMessage(event) {
     messages.push(messageR);
     // print in the canvas if it is built.
     if (toggleCanvas) {
-      printMessage(canvas, ctx, messages);
+      printMessage(canvas, ctx, messages, 1);
+      // Set slider max attribute
+      let slider = document.getElementById('slider');
+      slider.setAttribute('max', messages.length);
     }
   }
 }
@@ -245,7 +267,10 @@ function sendMessageChat() {
   messages.push(messageL);
   // reprint the messages to the canvas
   // with this in the bottom
-  printMessage(canvas, ctx, messages);
+  printMessage(canvas, ctx, messages, 1);
+  // Set slider max attribute
+  let slider = document.getElementById('slider');
+  slider.setAttribute('max', messages.length);
   // send the message to the other party as an object
   // including the login to print in their canvas.
   // Each party put its own date and time.
@@ -261,13 +286,13 @@ function sendMessageChat() {
   chatInput.value = '';
 }
 
-function printMessage(canvas, ctx, messages) {
+function printMessage(canvas, ctx, messages, messagePos) {
   let x, y;
   // Set y to the bottom of the canvas
   y = canvas.height - 40;
   ctx.clearRect(0, 0, canvas.width, canvas.height);
   // Get 1st the last message
-  for (let i = messages.length; i > 0; i--) {
+  for (let i = messages.length - messagePos + 1; i > 0; i--) {
     // Select the font
     ctx.font = 'bold 10px serif';
     let currentMessage = messages[i - 1];
@@ -481,7 +506,7 @@ function formatDate(date) {
     //
     if (now.getDay() === date.getDay()) {
       // today
-      return date.toLocaleString().slice(11);
+      return date.toLocaleString().slice(9);
     } else {
       // yesterday
       return date.toDateString().slice(0, 3) + date.toLocaleString().slice(9);
@@ -609,10 +634,18 @@ function readAllMessages() {
       console.log(`Got all messages: ${messages}`);
       // print messages if canvas is present
       if (toggleCanvas) {
-        printMessage(canvas, ctx, messages);
+        printMessage(canvas, ctx, messages, 1);
+        let slider = document.getElementById('slider');
+        slider.setAttribute('max', messages.length);
       }
     }
   };
+}
+
+function slideMessage() {
+  let slider = document.getElementById('slider');
+  // console.log(slider.value);
+  printMessage(canvas, ctx, messages, slider.value);
 }
 
 export { setDataChannel, onDataChannel, dataChannel, toggleCanvasChat };

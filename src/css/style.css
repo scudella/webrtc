@@ -16,6 +16,7 @@ body {
   margin-top: 0;
   margin-left: 0;
   margin-right: 0;
+  margin-bottom: 0;
   padding: 0px;
   font-family: 'Arial', 'Helvetica', sans-serif;
   background-color: dimgray;
@@ -217,18 +218,18 @@ body {
 body::after {
   content: '';
   display: block;
-  height: 100px; /* Set same as footer's height */
+  height: 91px; /* Set same as footer's height */
 }
 footer {
   position: absolute;
   bottom: 0;
   width: 100%;
-  height: 100px;
+  height: 90px;
 }
 .footercontainer {
   position: relative;
-  border: #333333 2px solid;
-  height: 6rem;
+  border-top: #333333 1px solid;
+  height: 90px;
 }
 .buttonsSvg {
   margin: 0;
