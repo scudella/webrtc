@@ -29,6 +29,9 @@ var screenReplaceVideo = localStorage.getItem('replace') === 'sameVideo';
 let noVideoCall = false;
 let sharingScreen = false;
 let partySide = '';
+const serverUrl = 'https://192.168.2.118';
+const webSocketUrl = 'wss://192.168.2.118';
+const port = '5000';
 
 class PeerConnection {
   constructor(token, peerConnection, mediaStream) {
@@ -219,7 +222,7 @@ window.onload = function init() {
 
   let settings = document.getElementById('settings');
   settings.addEventListener('click', () => {
-    document.location = 'http://localhost:8080/settings.html';
+    document.location = `${serverUrl}:${port}/settings.html`;
   });
 
   const constraint = {
@@ -406,7 +409,7 @@ window.onload = function init() {
 
         // create webSocket. The nodejs index.js application will handle it
         // it currently handles http and ws
-        socket = new WebSocket('ws://localhost:8080');
+        socket = new WebSocket(`${webSocketUrl}:${port}`);
 
         // if there is no hash code this is a caller leg
         if (
@@ -998,15 +1001,15 @@ function createVideoElement() {
   let local_video = document.querySelector('#local_video');
   local_video.parentNode.append(vid);
   vid.setAttribute('preload', 'auto');
-  vid.setAttribute('poster', 'http://localhost:8080/video/sintel.jpg');
+  vid.setAttribute('poster', `${serverUrl}:${port}/video/sintel.jpg`);
   //  vid.setAttribute('controls', true);
   vid.classList.add('smallVideoM');
   let mp4 = document.createElement('source');
-  mp4.setAttribute('src', 'http://localhost:8080/video/sintel.mp4');
+  mp4.setAttribute('src', `${serverUrl}:${port}/video/sintel.mp4`);
   mp4.setAttribute('type', 'video/mp4');
   vid.append(mp4);
   let webm = document.createElement('source');
-  webm.setAttribute('src', 'http://localhost:8080/video/sintel.webm');
+  webm.setAttribute('src', `${serverUrl}:${port}/video/sintel.webm`);
   webm.setAttribute('type', 'video/webm');
   vid.append(webm);
   vid.innerHTML += "Sorry, your browser doesn't support embedded videos.";
@@ -1108,4 +1111,4 @@ function muteLocalVideo(event) {
   // console.log(`Local video is muted: ${vid.muted}`);
 }
 
-export { peerConnection, call_token as token, partySide };
+export { peerConnection, call_token as token, partySide, serverUrl, port };

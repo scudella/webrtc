@@ -11,15 +11,28 @@ WHATSOEVER RESULTING FROM LOSS OF USE, DATA OR PROFITS, WHETHER IN AN ACTION OF 
 NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF OR IN CONNECTION WITH THE USE OR PERFORMANCE 
 OF THIS SOFTWARE. */
 
-const http = require('http');
+// For http uncomment the following line and comment out the next
+// const http = require('http');
+const https = require('https');
 const { readFile } = require('fs').promises;
+const { readFileSync } = require('fs');
 var websocket = require('websocket').server;
 
-var port = 8080;
+// For http comment out the following lines (options)
+const options = {
+  // key: readFileSync('../openssl/key.pem', 'utf8'),
+  // cert: readFileSync('../openssl/cert.pem', 'utf8'),
+  // passphrase: readFileSync('../openssl/passphrase', 'utf8'),
+  pfx: readFileSync('../openssl/treviso.pfx'),
+  passphrase: readFileSync('../openssl/passphrase'),
+};
+var port = 5000;
 var webrtc_clients = [];
 var webrtc_discussions = {};
 
-const http_server = http.createServer();
+// For http uncomment the following line and comment out the next one
+// const http_server = http.createServer();
+const http_server = https.createServer(options);
 
 http_server.on('request', (request, response) => {
   var matches = undefined;

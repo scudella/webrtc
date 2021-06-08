@@ -1,5 +1,6 @@
 node_modules
+remote-debug-profile
 .eslintrc.json
-.vscode
 src/video
+src/.vscode
 TODO
