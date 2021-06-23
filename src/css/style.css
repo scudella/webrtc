@@ -151,11 +151,15 @@ nav {
 }
 
 #local_video {
+  position: absolute;
   margin-top: 20px;
   margin-bottom: 0;
   margin-left: 20px;
-  flex: 1 8 auto;
+  /* flex: 1 8 auto; */
   width: 2%;
+  z-index: 5;
+  top: 0;
+  left: 0;
 }
 
 #remote_video {
@@ -184,7 +188,23 @@ nav {
   max-height: 240px;
   min-height: 60px;
 }
-
+#localVideoContainer {
+  position: relative;
+  order: -1;
+  flex: 8 1 auto;
+}
+.behindVideo {
+  z-index: 1;
+  position: absolute;
+  top: 0;
+  left: 0;
+  margin-top: 20px;
+  margin-bottom: 0;
+  margin-left: 20px;
+}
+.frontVideo {
+  z-index: 10;
+}
 .smallVideoR {
   max-width: 320px;
   min-width: 80px;

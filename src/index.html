@@ -41,7 +41,10 @@ OF THIS SOFTWARE. -->
     </header>
     <main id="videos">
       <div id="videoContainer" class="fc fcNoChat">
-        <video id="local_video" class="smallVideoL" autoplay muted></video>
+        <div id="localVideoContainer">
+          <video id="local_video" class="smallVideoL" autoplay muted></video>
+          <canvas id="canvasOverlay" class="behindVideo"> </canvas>
+        </div>
       </div>
     </main>
     <aside class="sc">

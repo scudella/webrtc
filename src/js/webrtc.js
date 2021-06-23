@@ -285,6 +285,9 @@ window.onload = function init() {
           originalStream.senders
             .find((sender) => sender.track.kind === 'video')
             .replaceTrack(canvasStream.mediaStream.getVideoTracks()[0]);
+          // bring the canvas overlay in front of the local video
+          let canvasOverlay = document.querySelector('#canvasOverlay');
+          canvasOverlay.classList.add('frontVideo');
         }
         // set timeout to redraw canvas, otherwise the remote side
         // does not start the video
@@ -295,6 +298,9 @@ window.onload = function init() {
       noVideoCall = false;
       // toggle the button to white
       toggleButton.classList.toggle('mute');
+      // move the canvas overlay to the back
+      let canvasOverlay = document.querySelector('#canvasOverlay');
+      canvasOverlay.classList.remove('frontVideo');
       let originalStream = null;
       // Has the local media already started?
       originalStream = allMediaStreams.find(
@@ -392,6 +398,11 @@ window.onload = function init() {
           noVideoStream.senders
             .find((sender) => sender.track.kind === 'video')
             .replaceTrack(blackVideoTrack);
+
+          // Let the canvas overlay the local_video
+          // with the same virtual canvas sent to the peer.
+          let canvasOverlay = document.querySelector('#canvasOverlay');
+          canvasOverlay.classList.add('frontVideo');
 
           // toggle video is enabled again
           document.getElementById('toggleVideo').disabled = false;
@@ -533,6 +544,13 @@ function drawCanvas() {
     ctx.fillText(char.toUpperCase(), width / 2 - 25, height / 2 + 25);
   }
   ctx.restore();
+  // Let us draw a canvas overlay to the local media
+  // with the same virtual canvas sent to the peer.
+  let canvasOverlay = document.querySelector('#canvasOverlay');
+  canvasOverlay
+    .getContext('2d')
+    .drawImage(virtualCanvas, 0, 0, video.offsetWidth, video.offsetHeight);
+
   setTimeout(drawCanvas, 100);
 }
 
@@ -716,8 +734,8 @@ function createVideo(videoid, event) {
   // console.log(vid);
 
   // Insert video in the DOM
-  let local_video = document.querySelector('#local_video');
-  local_video.parentNode.append(vid);
+  let videoContainer = document.querySelector('#videoContainer');
+  videoContainer.append(vid);
 
   // Add remote stream tracks to the new video
   vid.srcObject = event.streams[0];
@@ -998,8 +1016,8 @@ function createVideoElement() {
   links.classList.toggle('show-menu');
   let vid = document.createElement('video');
   vid.id = 'myVideo';
-  let local_video = document.querySelector('#local_video');
-  local_video.parentNode.append(vid);
+  let videoContainer = document.querySelector('#videoContainer');
+  videoContainer.append(vid);
   vid.setAttribute('preload', 'auto');
   vid.setAttribute('poster', `${serverUrl}:${port}/video/sintel.jpg`);
   //  vid.setAttribute('controls', true);
