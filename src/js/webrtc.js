@@ -541,15 +541,28 @@ function drawCanvas() {
     char = login.charAt(0);
     ctx.font = '130px serif';
     ctx.fillStyle = 'rgb(21, 14, 86)';
-    ctx.fillText(char.toUpperCase(), width / 2 - 25, height / 2 + 25);
+    // Let's measure the size of the letter to set it
+    // at the center of the canvas
+    let textMetrics = ctx.measureText(char.toUpperCase());
+    ctx.fillText(
+      char.toUpperCase(),
+      (width - textMetrics.width) / 2,
+      (height + textMetrics.actualBoundingBoxAscent) / 2
+    );
   }
   ctx.restore();
   // Let us draw a canvas overlay to the local media
   // with the same virtual canvas sent to the peer.
   let canvasOverlay = document.querySelector('#canvasOverlay');
-  canvasOverlay
-    .getContext('2d')
-    .drawImage(virtualCanvas, 0, 0, video.offsetWidth, video.offsetHeight);
+  let canvasOverlayCtx = canvasOverlay.getContext('2d');
+
+  canvasOverlayCtx.drawImage(
+    virtualCanvas,
+    0,
+    0,
+    video.offsetWidth,
+    video.offsetHeight
+  );
 
   setTimeout(drawCanvas, 100);
 }
@@ -1096,6 +1109,14 @@ function videoDblClick(event) {
   event.stopPropagation();
   const t = event.target;
   t.classList.toggle('fullScreen');
+  if (t.parentNode.id === 'localVideoContainer') {
+    t.parentNode.classList.toggle('fullScreenLocal');
+    // set canvas width and height accordingly otherwise its
+    // size won't match the video when changing its size
+    let canvas = document.getElementById('canvasOverlay');
+    canvas.width = t.offsetWidth;
+    canvas.height = t.offsetHeight;
+  }
 }
 
 function muteLocalVideo(event) {

@@ -23,6 +23,10 @@ OF THIS SOFTWARE.
 .container {
 }
 
+.hide {
+  display: none;
+}
+
 /* container for the grid of the message chat */
 .content {
   display: grid;

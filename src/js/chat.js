@@ -42,6 +42,12 @@ function toggleCanvasChat() {
     // decrease width for videos
     let videoContainer = document.getElementById('videoContainer');
     videoContainer.classList.remove('fcNoChat');
+    // Show containers for chat
+    document.getElementById('chatContent').classList.remove('hide');
+    document.getElementById('message').classList.remove('hide');
+    document.getElementById('inputTextArea').classList.remove('hide');
+    document.getElementById('sendButton').classList.remove('hide');
+    document.getElementById('sliderMsg').classList.remove('hide');
     // create element and attributes
     let canvasElement = document.createElement('canvas');
     canvasElement.id = 'chat';
@@ -124,6 +130,13 @@ function toggleCanvasChat() {
   // destroy canvas
   else {
     toggleCanvas = false;
+
+    // Hide containers for chat
+    document.getElementById('chatContent').classList.add('hide');
+    document.getElementById('message').classList.add('hide');
+    document.getElementById('inputTextArea').classList.add('hide');
+    document.getElementById('sendButton').classList.add('hide');
+    document.getElementById('sliderMsg').classList.add('hide');
 
     let chat = document.getElementById('chat');
     chat.removeAttribute('height');

@@ -152,22 +152,26 @@ nav {
 
 #local_video {
   position: absolute;
-  margin-top: 20px;
-  margin-bottom: 0;
-  margin-left: 20px;
-  /* flex: 1 8 auto; */
-  width: 2%;
-  z-index: 5;
   top: 0;
   left: 0;
 }
-
+.localVideo {
+  margin-top: 20px;
+  margin-bottom: 0;
+  margin-left: 20px;
+  width: 2%;
+  z-index: 5;
+}
+.fullScreenLocal {
+  flex: 1 4 auto;
+  min-width: 340px;
+  min-height: 260px;
+}
 #remote_video {
   margin-top: 20px;
   margin-bottom: 0;
   margin-left: 20px;
   flex: 2 4 auto;
-  width: 10%;
 }
 
 #myVideo {
@@ -190,6 +194,8 @@ nav {
 }
 #localVideoContainer {
   position: relative;
+}
+.localVideoContainer {
   order: -1;
   flex: 8 1 auto;
 }
@@ -229,6 +235,8 @@ nav {
 .fullScreen {
   max-width: 800px;
   max-height: 420px;
+  min-width: 320px;
+  min-height: 240px;
 }
 body {
   min-height: 100vh;
@@ -370,9 +378,9 @@ footer {
 .fc {
   display: flex;
   flex-flow: row wrap;
-  justify-content: flex-start safe;
+  justify-content: space-evenly;
   align-items: flex-start;
-  align-content: flex-start;
+  align-content: start;
 }
 
 header {
