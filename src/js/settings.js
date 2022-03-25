@@ -1,4 +1,4 @@
-/*  Copyright (c) 2021 Eduardo S. Libardi, All rights reserved. 
+/*  Copyright (c) 2022 Eduardo S. Libardi, All rights reserved. 
 
 Permission to use, copy, modify, and/or distribute this software for any purpose with or 
 without fee is hereby granted, provided that the above copyright notice and this permission 
@@ -25,7 +25,7 @@ window.onload = function init() {
 
   let replaceVideo = localStorage.getItem('replace');
   if (replaceVideo == null) {
-    document.getElementById('sameVideo').checked = true;
+    document.getElementById('newVideo').checked = true;
   } else if (replaceVideo === 'sameVideo') {
     document.getElementById('sameVideo').checked = true;
   } else {
@@ -35,9 +35,8 @@ window.onload = function init() {
   function loginInput() {
     // let loginRegex = /^[a-zA-Z][a-zA-Z0-9_-]{7-33}$/;
     let loginRegex = /^[A-Za-z0-9_-]{6,32}$/;
-    let validLogin = document.forms['mySettings']['login'].value.match(
-      loginRegex
-    );
+    let validLogin =
+      document.forms['mySettings']['login'].value.match(loginRegex);
     if (!validLogin) {
       document.getElementById('login').classList.add('inputInvalid');
     } else {
@@ -52,9 +51,8 @@ window.onload = function init() {
   function formReady(evt) {
     evt.preventDefault();
     let loginRegex = /^[a-zA-Z][a-zA-Z0-9]/;
-    let validLogin = document.forms['mySettings']['login'].value.match(
-      loginRegex
-    );
+    let validLogin =
+      document.forms['mySettings']['login'].value.match(loginRegex);
     if (validLogin !== null) {
       let login = document.forms['mySettings']['login'].value;
       localStorage.setItem('login', login);
@@ -75,3 +73,6 @@ window.onload = function init() {
     }
   }
 };
+const date = document.querySelector('#date');
+// set year
+date.innerHTML = new Date().getFullYear();

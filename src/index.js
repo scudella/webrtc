@@ -1,4 +1,4 @@
-/*  Copyright (c) 2021 Eduardo S. Libardi, All rights reserved. 
+/*  Copyright (c) 2022 Eduardo S. Libardi, All rights reserved. 
 
 Permission to use, copy, modify, and/or distribute this software for any purpose with or 
 without fee is hereby granted, provided that the above copyright notice and this permission 
@@ -17,6 +17,7 @@ const https = require('https');
 const { readFile } = require('fs').promises;
 const { readFileSync } = require('fs');
 var websocket = require('websocket').server;
+const path = require('path');
 
 // For http comment out the following lines (options)
 const options = {
@@ -26,45 +27,49 @@ const options = {
   pfx: readFileSync('../openssl/treviso.pfx'),
   passphrase: readFileSync('../openssl/passphrase'),
 };
-var port = 5000;
-var webrtc_clients = [];
-var webrtc_discussions = {};
+const port = 5000;
+let webrtc_clients = [];
+let webrtc_discussions = {};
+let filePath = '';
 
 // For http uncomment the following line and comment out the next one
 // const http_server = http.createServer();
 const http_server = https.createServer(options);
 
 http_server.on('request', (request, response) => {
-  var matches = undefined;
+  let matches = undefined;
 
   if ((matches = request.url.match('^/images/(.*)'))) {
-    let path = process.cwd() + '/src/images/' + matches[1];
+    filePath = path.join(__dirname, '/images/', matches[1]);
     let imageExtension = request.url.match('svg');
     if (imageExtension && imageExtension[0] === 'svg') {
       response.writeHead(200, { 'content-type': 'image/svg+xml' });
     }
-    readFiles(path, response);
+    readFiles(filePath, response);
   } else if (request.url === '/' || request.url === '/index.html') {
     response.writeHead(200, { 'content-type': 'text/html' });
     readhtml(response);
   } else if (request.url === '/settings.html') {
     response.writeHead(200, { 'content-type': 'text/html' });
     readsettings(response);
+  } else if (request.url === '/app.html') {
+    response.writeHead(200, { 'content-type': 'text/html' });
+    readApp(response);
   } else if ((matches = request.url.match('^/video/(.*)'))) {
-    let path = process.cwd() + '/src/video/' + matches[1];
+    filePath = path.join(__dirname, '/video/', matches[1]);
     let matchExtension = request.url.match('vtt');
     if (matchExtension && matchExtension[0] === 'vtt') {
       response.writeHead(200, { 'content-type': 'text/vtt' });
     }
-    readFiles(path, response);
+    readFiles(filePath, response);
   } else if ((matches = request.url.match('^/js/(.*)'))) {
-    let path = process.cwd() + '/src/js/' + matches[1];
+    filePath = path.join(__dirname, '/js/', matches[1]);
     response.writeHead(200, { 'content-type': 'text/javascript' });
-    readFiles(path, response);
+    readFiles(filePath, response);
   } else if ((matches = request.url.match('^/css/(.*)'))) {
-    let path = process.cwd() + '/src/css/' + matches[1];
+    filePath = path.join(__dirname, '/css/', matches[1]);
     response.writeHead(200, { 'content-type': 'text/css' });
-    readFiles(path, response);
+    readFiles(filePath, response);
   }
 });
 
@@ -93,6 +98,14 @@ const readhtml = async (response) => {
 const readsettings = async (response) => {
   try {
     const page = await readFile('./src/settings.html', 'utf8');
+    response.end(page);
+  } catch (error) {
+    log_error(error);
+  }
+};
+const readApp = async (response) => {
+  try {
+    const page = await readFile('./src/app.html', 'utf8');
     response.end(page);
   } catch (error) {
     log_error(error);

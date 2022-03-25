@@ -1,4 +1,4 @@
-<!--  Copyright (c) 2021 Eduardo S. Libardi, All rights reserved. 
+<!--  Copyright (c) 2022 Eduardo S. Libardi, All rights reserved. 
 
 Permission to use, copy, modify, and/or distribute this software for any purpose with or 
 without fee is hereby granted, provided that the above copyright notice and this permission 
@@ -16,136 +16,77 @@ OF THIS SOFTWARE. -->
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>WebRTC</title>
+    <title>WebRTC | Home Page</title>
+    <!-- font awesome -->
     <link
       rel="stylesheet"
-      href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.14.0/css/all.min.css"
+      href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.1.0/css/all.min.css"
     />
-    <script type="module" src="js/webrtc.js"></script>
-    <script type="module" src="js/chat.js"></script>
+    <!-- js script for settings -->
+    <script type="module" src="js/start.js"></script>
+    <!-- css -->
     <link rel="stylesheet" href="css/style.css" />
-    <link rel="stylesheet" href="css/chat.css" />
   </head>
   <body>
-    <header id="header">
-      <nav>
-        <div class="nav-center">
-          <div class="nav-header">
-            <img src="images/logo.svg" class="logo" alt="logo" />
-            <button class="nav-toggle">
-              <i class="fas fa-bars"></i>
-            </button>
-          </div>
-        </div>
-      </nav>
-    </header>
-    <main id="videos">
-      <div id="videoContainer" class="fc fcNoChat">
-        <div id="localVideoContainer" class="localVideoContainer">
-          <video
-            id="local_video"
-            class="localVideo smallVideoL"
-            autoplay
-            muted
-          ></video>
-          <canvas id="canvasOverlay" class="behindVideo"> </canvas>
+    <nav>
+      <div class="nav-center">
+        <div class="nav-header">
+          <img src="images/logo.svg" class="logo" alt="logo" />
         </div>
       </div>
+    </nav>
+    <main>
+      <header class="hero-index"></header>
+      <section class="meeting">
+        <div class="meeting-center">
+          <div class="form-container">
+            <form id="form" class="form">
+              <h3>start a new meeting</h3>
+              <div class="underline"></div>
+              <div class="button-start">
+                <button id="tokenGen" class="btn btn-gen" type="button">
+                  Meeting Code
+                </button>
+              </div>
+              <label for="givenToken" class="form-label">
+                or enter code:
+                <input
+                  type="text"
+                  name="givenToken"
+                  id="givenToken"
+                  maxlength="20"
+                  placeholder="Enter Meeting Code"
+                  required
+                  class="form-input token-form"
+                />
+              </label>
+              <label for="url" class="form-label">
+                URL:
+                <input
+                  type="text"
+                  name="url"
+                  id="url"
+                  maxlength="50"
+                  disabled
+                  class="form-input"
+                  placeholder="send this URL to the other parties"
+                />
+              </label>
+              <div class="button-start">
+                <button id="startvideo" type="button" class="btn-start">
+                  <img src="images/play-svgrepo-com.svg" alt="Start Button" />
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      </section>
     </main>
-    <aside class="sc">
-      <div class="container">
-        <div id="chatContent" class="content hide">
-          <div id="message" class="hide"></div>
-          <div id="inputTextArea" class="hide"></div>
-          <div id="sendButton" class="hide"></div>
-          <div id="sliderMsg" class="hide">
-            <div id="sliderWrapper" class="sliderWrapper"></div>
-          </div>
-        </div>
-
-        <div class="menu">
-          <div class="inner-menu">
-            <button id="shareVideo" class="menu-item" disabled>
-              <div class="box-item">
-                <div class="inner-box-item"></div>
-              </div>
-              <div class="avatar">
-                <i class="fas fa-chevron-circle-right inner-avatar"></i>
-              </div>
-              <div class="text">
-                <div class="inner-text">Share Video</div>
-              </div>
-            </button>
-
-            <button id="canvasChat" class="menu-item" disabled>
-              <div class="box-item">
-                <div class="inner-box-item"></div>
-              </div>
-              <div class="avatar">
-                <img src="images/chat.svg" alt="chat icon" />
-              </div>
-              <div class="text">
-                <div class="inner-text">Chat</div>
-              </div>
-            </button>
-
-            <button id="settings" class="menu-item">
-              <div class="box-item">
-                <div class="inner-box-item"></div>
-              </div>
-              <div class="avatar">
-                <img src="images/settings.svg" alt="settings icon" />
-              </div>
-              <div class="text">
-                <div class="inner-text">Settings</div>
-              </div>
-            </button>
-          </div>
-        </div>
-      </div>
-    </aside>
-    <footer>
-      <div class="footerPosition">
-        <div class="footercontainer">
-          <div class="buttonsSvg">
-            <button id="startvideo">
-              <img src="images/play-svgrepo-com.svg" alt="Start Button" />
-            </button>
-            <button id="toggleVideo">
-              <img src="images/camera.svg" alt="No video Button" />
-            </button>
-            <button id="mute" class="mute" disabled>
-              <img
-                class="mic"
-                src="images/voice-microphone-svgrepo-com.svg"
-                alt="Mute button"
-              />
-            </button>
-            <button id="hangup" disabled>
-              <img src="images/hangup.svg" alt="Hang-up button" />
-            </button>
-          </div>
-          <div class="buttons">
-            <button id="tokenGen">Gen</button>
-            <label for="givenToken">
-              <span>Token: </span>
-              <input
-                type="text"
-                name="givenToken"
-                id="givenToken"
-                maxlength="20"
-                required
-              />
-            </label>
-            <label for="url">
-              <span>URL: </span>
-              <input type="text" name="url" id="url" maxlength="50" disabled />
-            </label>
-            <button id="call-state" class="closed-state">Status</button>
-            <button id="sharescreen" disabled>Share Screen</button>
-          </div>
-        </div>
-      </div>
+    <!-- footer -->
+    <footer class="footer">
+      <p>
+        &copy; <span id="date"></span> Eduardo S. Libardi. all rights reserved
+      </p>
     </footer>
   </body>
 </html>

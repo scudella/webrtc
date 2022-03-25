@@ -12,7 +12,7 @@ NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF OR IN CONNECTION WITH THE US
 OF THIS SOFTWARE.
 */
 
-import { peerConnection, partySide, token } from './webrtc.js';
+import { peerConnection, partySide, callToken } from './webrtc.js';
 let canvas;
 let ctx;
 let messages = [];
@@ -22,46 +22,59 @@ let dbWebRTC = null;
 let queue = [];
 
 class Message {
-  constructor(fromName, message, fromMyself, date, token, partySide) {
+  constructor(fromName, message, fromMyself, date, callToken, partySide) {
     this.fromName = fromName;
     this.message = message;
     this.fromMyself = fromMyself;
     this.date = date;
-    this.token = token;
+    this.token = callToken;
     this.partySide = partySide;
   }
 }
 
 function toggleCanvasChat() {
   // Remove menu from the front of the canvas
-  const links = document.querySelector('.menu');
-  links.classList.toggle('show-menu');
-  // draw canvas
+  document.querySelector('.menu').classList.toggle('show-menu');
   if (!toggleCanvas) {
+    // draw canvas
     toggleCanvas = true;
     // decrease width for videos
     let videoContainer = document.getElementById('videoContainer');
-    videoContainer.classList.remove('fcNoChat');
-    // Show containers for chat
-    document.getElementById('chatContent').classList.remove('hide');
-    document.getElementById('message').classList.remove('hide');
-    document.getElementById('inputTextArea').classList.remove('hide');
-    document.getElementById('sendButton').classList.remove('hide');
-    document.getElementById('sliderMsg').classList.remove('hide');
-    // create element and attributes
-    let canvasElement = document.createElement('canvas');
+    videoContainer.classList.add('videoContainerChat');
+    videoContainer.classList.remove('videoContainerNoChat');
+    if (videoContainer.classList.contains('videoContainerNoChatShare')) {
+      videoContainer.classList.remove('videoContainerNoChatShare');
+      videoContainer.classList.add('videoContainerChatShare');
+    }
+    // Create containers for chat
+    const chatContainer = document.createElement('div');
+    chatContainer.id = 'chatContent';
+    chatContainer.className = 'chatContainer';
+    document.querySelector('.sc').append(chatContainer);
+    const canvasContainer = document.createElement('div');
+    canvasContainer.id = 'message';
+    canvasContainer.className = 'item-canvas';
+    chatContainer.append(canvasContainer);
+    const inputContainer = document.createElement('div');
+    inputContainer.id = 'inputTextArea';
+    inputContainer.className = 'inputData';
+    chatContainer.append(inputContainer);
+    const sliderContainer = document.createElement('div');
+    sliderContainer.id = 'sliderWrapper';
+    sliderContainer.className = 'sliderWrapper';
+    chatContainer.append(sliderContainer);
+
+    // create canvas element and attributes
+    const canvasElement = document.createElement('canvas');
     canvasElement.id = 'chat';
     canvasElement.className = 'chat';
-    canvasElement.setAttribute('height', '410');
-    canvasElement.setAttribute('width', '330');
+    canvasElement.setAttribute('height', '360');
+    canvasElement.setAttribute('width', '352');
 
-    // insert at message id div
-    let messageid = document.getElementById('message');
-    messageid.append(canvasElement);
-    messageid.classList.add('item-canvas');
+    canvasContainer.append(canvasElement);
 
     // create text area input for chat
-    let inputElement = document.createElement('textarea');
+    const inputElement = document.createElement('textarea');
     inputElement.id = 'chatInput';
     inputElement.className = 'chatInput';
     // inputElement.classList.add('item-input');
@@ -74,34 +87,23 @@ function toggleCanvasChat() {
     inputElement.maxLength = '160';
     // Wrap without inserting CRLF, but respecting it
     inputElement.wrap = 'soft';
-    // create element
-    let inputTextArea = document.getElementById('inputTextArea');
-    inputTextArea.append(inputElement);
-    // add class for grid position
-    inputTextArea.classList.add('item-input');
-    inputElement.focus();
-
-    // Enable chat input
-    let chat = document.querySelector('#chatInput');
-    chat.addEventListener('input', chatInput);
+    inputElement.className = 'item-input';
 
     // create send button
-    let sendButtonElement = document.createElement('button');
+    const sendButtonElement = document.createElement('button');
     sendButtonElement.id = 'send';
-
     sendButtonElement.textContent = 'Send';
-    let sendButton = document.getElementById('sendButton');
-    // add class for grid position
-    sendButton.classList.add('item-send');
-    sendButton.append(sendButtonElement);
+    sendButtonElement.className = 'item-send';
+
+    inputContainer.append(inputElement, sendButtonElement);
+    inputElement.focus();
+    // Enable chat input
+    inputElement.addEventListener('input', chatInput);
 
     // Enable send chat button
-    let sendMessage = document.querySelector('#send');
-    sendMessage.addEventListener('click', sendMessageChat);
+    sendButtonElement.addEventListener('click', sendMessageChat);
 
     // Create input type range
-    let sliderMsg = document.getElementById('sliderMsg');
-    sliderMsg.className = 'item-scroll';
     let slider = document.createElement('input');
     slider.id = 'slider';
     slider.setAttribute('type', 'range');
@@ -109,8 +111,8 @@ function toggleCanvasChat() {
     slider.setAttribute('max', '10');
     slider.setAttribute('step', '1');
     slider.setAttribute('value', '1');
-    let sliderWrapper = document.getElementById('sliderWrapper');
-    sliderWrapper.append(slider);
+    slider.className = 'slider';
+    sliderContainer.append(slider);
     slider.addEventListener('input', slideMessage);
 
     canvas = document.querySelector('#chat');
@@ -131,17 +133,12 @@ function toggleCanvasChat() {
   else {
     toggleCanvas = false;
 
-    // Hide containers for chat
-    document.getElementById('chatContent').classList.add('hide');
-    document.getElementById('message').classList.add('hide');
-    document.getElementById('inputTextArea').classList.add('hide');
-    document.getElementById('sendButton').classList.add('hide');
-    document.getElementById('sliderMsg').classList.add('hide');
-
+    // Remove chat containers and elements
     let chat = document.getElementById('chat');
     chat.removeAttribute('height');
     chat.removeAttribute('width');
     chat.remove();
+    document.getElementById('message').remove();
 
     let chatInput = document.getElementById('chatInput');
     chatInput.removeEventListener('input', chatInput);
@@ -151,13 +148,21 @@ function toggleCanvasChat() {
     sendButton.textContent = '';
     sendButton.removeEventListener('click', sendMessageChat);
     sendButton.remove();
+    document.getElementById('inputTextArea').remove();
 
     let slider = document.getElementById('slider');
     slider.removeEventListener('input', slideMessage);
     slider.remove();
+    document.getElementById('sliderWrapper').remove();
+    document.getElementById('chatContent').remove();
     // increase width for videos
     let videoContainer = document.getElementById('videoContainer');
-    videoContainer.classList.add('fcNoChat');
+    videoContainer.classList.add('videoContainerNoChat');
+    videoContainer.classList.remove('videoContainerChat');
+    if (videoContainer.classList.contains('videoContainerChatShare')) {
+      videoContainer.classList.remove('videoContainerChatShare');
+      videoContainer.classList.add('videoContainerNoChatShare');
+    }
   }
 }
 
@@ -203,7 +208,8 @@ function receiveMessage(event) {
     msg,
     false,
     date,
-    token.slice(1),
+    // token.slice(1),
+    callToken,
     partySide
   );
 
@@ -275,7 +281,8 @@ function sendMessageChat() {
     chatInput.value,
     true,
     date,
-    token.slice(1),
+    // token.slice(1),
+    callToken,
     partySide
   );
   console.log(messageL);
@@ -307,7 +314,7 @@ function sendMessageChat() {
 function printMessage(canvas, ctx, messages, messagePos) {
   let x, y;
   // Set y to the bottom of the canvas
-  y = canvas.height - 40;
+  y = canvas.height;
   ctx.clearRect(0, 0, canvas.width, canvas.height);
   // Get 1st the last message
   for (let i = messages.length - messagePos + 1; i > 0; i--) {
@@ -330,7 +337,7 @@ function printMessage(canvas, ctx, messages, messagePos) {
     if (currentMessage.fromMyself) {
       x = 45;
       ctx.strokeStyle = 'rgb(33,33,33)';
-      ctx.fillStyle = 'rgb(113,240,245)';
+      ctx.fillStyle = 'rgb(137, 207, 242)';
       ctx.lineWidth = 1;
       roundedRect(
         ctx,
@@ -345,7 +352,7 @@ function printMessage(canvas, ctx, messages, messagePos) {
     } else {
       x = 15;
       ctx.strokeStyle = 'rgb(33,33,33)';
-      ctx.fillStyle = 'rgb(107,232,169)';
+      ctx.fillStyle = 'rgb(100, 227, 172)';
       ctx.lineWidth = 1;
       roundedRect(
         ctx,
@@ -359,9 +366,6 @@ function printMessage(canvas, ctx, messages, messagePos) {
       );
     }
 
-    // console.log('currentMessage');
-    // console.log(currentMessage);
-
     // Print from name
     ctx.fillStyle = 'rgb(33,33,33';
     ctx.fillText(currentMessage.fromName.toString(), x + 5, y);
@@ -369,8 +373,6 @@ function printMessage(canvas, ctx, messages, messagePos) {
     // format the date according to: last 24hs, last week, or older
     let dateTime = formatDate(currentMessage.date);
 
-    // console.log('dateTime');
-    // console.log(dateTime);
     // Print the date
     ctx.fillText(dateTime, x + 140 - dateTime.length, y);
     // Change font size for the message content
@@ -380,8 +382,6 @@ function printMessage(canvas, ctx, messages, messagePos) {
       ctx.fillText(message.toString(), x + 20, internalY + 15);
       internalY += 15;
     });
-    // console.log('message:');
-    // console.log(currentMessage.message);
   }
 }
 
@@ -524,7 +524,7 @@ function formatDate(date) {
     //
     if (now.getDay() === date.getDay()) {
       // today
-      return date.toLocaleString().slice(9);
+      return date.toLocaleTimeString('en-US');
     } else {
       // yesterday
       return date.toDateString().slice(0, 3) + date.toLocaleString().slice(9);
@@ -577,7 +577,8 @@ function createDatabase(dbName) {
       'Hello! Welcome to WebRTC App! Type your message in the field below and press send!',
       false,
       dateTime,
-      token.slice(1),
+      // token.slice(1),
+      callToken,
       partySide
     );
     messages.push(welcomeMessage);
@@ -641,7 +642,8 @@ function readAllMessages() {
       // party is used to avoid duplicated messages in localhost usage
       if (
         cursor.value.partySide === partySide &&
-        cursor.value.token === token.slice(1)
+        // cursor.value.token === token.slice(1)
+        cursor.value.token === callToken
       ) {
         messages.push(cursor.value);
         // console.log('cursor.value: ');

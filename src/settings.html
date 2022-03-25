@@ -1,4 +1,4 @@
-<!--  Copyright (c) 2021 Eduardo S. Libardi, All rights reserved. 
+<!--  Copyright (c) 2022 Eduardo S. Libardi, All rights reserved. 
 
 Permission to use, copy, modify, and/or distribute this software for any purpose with or 
 without fee is hereby granted, provided that the above copyright notice and this permission 
@@ -16,64 +16,83 @@ OF THIS SOFTWARE. -->
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>WebRTC</title>
+    <title>WebRTC | Settings</title>
+    <!-- font awesome -->
     <link
       rel="stylesheet"
-      href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.14.0/css/all.min.css"
+      href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.1.0/css/all.min.css"
     />
+    <!-- js script for settings -->
     <script type="module" src="js/settings.js"></script>
-    <link rel="stylesheet" href="css/settings.css" />
+    <!-- css -->
+    <link rel="stylesheet" href="css/style.css" />
   </head>
   <body>
-    <header id="header">
-      <nav>
-        <div class="nav-center">
-          <div class="nav-header">
-            <img src="images/logo.svg" class="logo" alt="logo" />
-          </div>
+    <nav>
+      <div class="nav-center">
+        <div class="nav-header">
+          <img src="images/logo.svg" class="logo" alt="logo" />
         </div>
-      </nav>
-    </header>
-    <main class="settings">
-      <div id="center" class="fc">
-        <div class="fcform">
-          <form name="mySettings" id="form" action="">
-            <p class="psettings">Please, enter your login:</p>
-            <label for="login">
-              <span class="labelName">Login: </span>
-              <input
-                type="text"
-                name="login"
-                id="login"
-                required
-                minlength="6"
-                maxlength="32"
-              />
-            </label>
-            <p class="psettings">For Shared Screen:</p>
+      </div>
+    </nav>
+    <main>
+      <header class="hero">
+        <div id="center" class="banner">
+          <h2>WebRTC Settings</h2>
+          <h4>setup before placing the call</h4>
+        </div>
+      </header>
+      <div class="form-container">
+        <form name="mySettings" id="form" class="form">
+          <label for="login" class="form-label">
+            <span>Login: </span>
             <input
+              class="form-input"
+              type="text"
+              name="login"
+              id="login"
+              required
+              minlength="6"
+              maxlength="32"
+            />
+            <p class="text-small">The login is used for chat</p>
+          </label>
+          <div class="radio form-label">
+            <h5>Screen Sharing :</h5>
+            <input
+              class="input-radio"
               type="radio"
               name="replaceVideo"
               id="sameVideo"
               value="sameVideo"
             />
-            <label class="labelName" for="sameVideo">Same Video</label><br />
+            <label for="sameVideo">Same Video - Uses the same stream</label
+            ><br />
             <input
+              class="input-radio"
               type="radio"
               name="replaceVideo"
               id="newVideo"
               value="newVideo"
             />
-            <label class="labelName" for="newVideo">New Video</label><br />
+            <label for="newVideo">New Video - creates a second stream</label
+            ><br />
             <br />
-            <input class="buttons" type="submit" value="Submit" />
-          </form>
-        </div>
+          </div>
+          <div class="settings-btn">
+            <button class="btn" type="submit">Submit</button>
+            <button class="btn">
+              <a href="index.html">Cancel</a>
+            </button>
+          </div>
+        </form>
       </div>
     </main>
-
-    <footer>
-      <p class="psettings">Settings applies at the beginning of a call.</p>
+    <!-- footer -->
+    <footer class="footer">
+      <p>
+        &copy; <span id="date"></span> Eduardo S. Libardi. all rights reserved
+      </p>
     </footer>
   </body>
 </html>

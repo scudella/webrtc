@@ -1,0 +1,115 @@
+<!--  Copyright (c) 2022 Eduardo S. Libardi, All rights reserved. 
+
+Permission to use, copy, modify, and/or distribute this software for any purpose with or 
+without fee is hereby granted, provided that the above copyright notice and this permission 
+notice appear in all copies.
+
+THE SOFTWARE IS PROVIDED "AS IS" AND THE AUTHOR DISCLAIMS ALL WARRANTIES WITH REGARD TO THIS 
+SOFTWARE INCLUDING ALL IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS. IN NO EVENT SHALL 
+THE AUTHOR BE LIABLE FOR ANY SPECIAL, DIRECT, INDIRECT, OR CONSEQUENTIAL DAMAGES OR ANY DAMAGES 
+WHATSOEVER RESULTING FROM LOSS OF USE, DATA OR PROFITS, WHETHER IN AN ACTION OF CONTRACT, 
+NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF OR IN CONNECTION WITH THE USE OR PERFORMANCE 
+OF THIS SOFTWARE. -->
+
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>WebRTC App</title>
+    <!-- font awesome -->
+    <link
+      rel="stylesheet"
+      href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.1.0/css/all.min.css"
+    />
+    <script type="module" src="js/webrtc.js"></script>
+    <script type="module" src="js/chat.js"></script>
+    <link rel="stylesheet" href="css/style.css" />
+  </head>
+  <body>
+    <nav>
+      <div class="nav-center">
+        <div class="nav-header">
+          <img src="images/logo.svg" class="logo" alt="logo" />
+          <button class="nav-toggle">
+            <i class="fas fa-bars"></i>
+          </button>
+        </div>
+      </div>
+    </nav>
+    <main>
+      <div id="videoContainer" class="videoContainer videoContainerNoChat">
+        <div id="localVideoContainer" class="localVideoContainer">
+          <video id="local_video" class="localVideo" autoplay muted></video>
+          <canvas id="canvasOverlay" class="behindVideo"> </canvas>
+        </div>
+      </div>
+    </main>
+    <aside class="sc">
+      <div class="menu">
+        <button id="shareVideo" class="menu-item" disabled>
+          <i class="fa-solid fa-circle-chevron-right sidebar-icon"></i>
+          <span class="inner-text">Share Video</span>
+        </button>
+
+        <button id="canvasChat" class="menu-item" disabled>
+          <img src="images/chat.svg" alt="chat icon" />
+          <span class="inner-text">Chat</span>
+        </button>
+
+        <button id="sharescreen" class="menu-item" disabled>
+          <i class="fa-solid fa-share-nodes sidebar-icon"></i>
+          <span class="inner-text">Share Screen</span>
+        </button>
+
+        <button id="settings" class="menu-item">
+          <img src="images/settings.svg" alt="settings icon" />
+          <span class="inner-text">Settings</span>
+        </button>
+      </div>
+    </aside>
+    <footer class="footer-webrtc">
+      <div class="footercontainer">
+        <div class="buttonsSvg">
+          <!-- <button id="startvideo">
+            <img src="images/play-svgrepo-com.svg" alt="Start Button" />
+          </button> -->
+          <button id="toggleVideo">
+            <img src="images/camera.svg" alt="No video Button" />
+          </button>
+          <button id="mute" class="mute" disabled>
+            <img
+              class="mic"
+              src="images/voice-microphone-svgrepo-com.svg"
+              alt="Mute button"
+            />
+          </button>
+          <button id="hangup" disabled>
+            <img src="images/hangup.svg" alt="Hang-up button" />
+          </button>
+          <button id="call-state" class="closed-state">
+            <i class="fa-regular fa-circle"></i>
+          </button>
+        </div>
+        <!-- <div class="buttons"> -->
+        <!-- <button id="tokenGen">Gen</button>
+          <label for="givenToken">
+            <span>Token: </span>
+            <input
+              type="text"
+              name="givenToken"
+              id="givenToken"
+              maxlength="20"
+              required
+            />
+          </label>
+          <label for="url">
+            <span>URL: </span>
+            <input type="text" name="url" id="url" maxlength="50" disabled />
+          </label> -->
+        <!-- <button id="call-state" class="closed-state">Status</button> -->
+        <!-- </div> -->
+      </div>
+    </footer>
+  </body>
+</html>
