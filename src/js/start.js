@@ -12,8 +12,6 @@ NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF OR IN CONNECTION WITH THE US
 OF THIS SOFTWARE.
 */
 
-import { serverUrl, port } from './webrtc.js';
-
 let callToken = '';
 window.onload = function init() {
   const processGen = () => {
@@ -21,7 +19,7 @@ window.onload = function init() {
     callToken = Date.now() + '-' + Math.round(Math.random() * 10000);
     givenToken.value = callToken;
     const urlField = document.querySelector('#url');
-    urlField.value = `${serverUrl}:${port}/#${callToken}`;
+    urlField.value = `${document.location.origin}/#${callToken}`;
   };
   const videoCall = () => {
     if (callToken === '' || callToken === undefined) {
@@ -33,12 +31,12 @@ window.onload = function init() {
       } else {
         // store token to app usage
         sessionStorage.setItem('callToken', callToken);
-        document.location = `${serverUrl}:${port}/app.html`;
+        document.location = `${document.location.origin}/app.html`;
       }
     } else {
       // store token to app usage
       sessionStorage.setItem('callToken', callToken);
-      document.location = `${serverUrl}:${port}/app.html`;
+      document.location = `${document.location.origin}/app.html`;
     }
   };
   const tokenGen = document.querySelector('#tokenGen');

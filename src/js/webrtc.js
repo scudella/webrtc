@@ -29,9 +29,8 @@ let screenReplaceVideo = localStorage.getItem('replace') === 'sameVideo';
 let noVideoCall = false;
 let sharingScreen = false;
 let partySide = '';
-const serverUrl = 'https://192.168.2.118';
-const webSocketUrl = 'wss://192.168.2.118';
-const port = '5000';
+let serverOrigin = '';
+let webSocketOrigin = '';
 
 class PeerConnection {
   constructor(callToken, peerConnection, mediaStream) {
@@ -44,6 +43,8 @@ class PeerConnection {
 window.onload = function init() {
   // Load token provided in the home page
   callToken = sessionStorage.getItem('callToken');
+  serverOrigin = document.location.origin;
+  webSocketOrigin = `wss://${document.location.host}`;
 
   let configuration = {
     iceservers: [{ urls: 'stun:stun.l.google.com:19302' }],
@@ -221,7 +222,7 @@ window.onload = function init() {
 
   let settings = document.getElementById('settings');
   settings.addEventListener('click', () => {
-    document.location = `${serverUrl}:${port}/settings.html`;
+    document.location = `${serverOrigin}/settings.html`;
   });
 
   const constraint = {
@@ -423,7 +424,7 @@ window.onload = function init() {
 
         // create webSocket. The nodejs index.js application will handle it
         // it currently handles http and ws
-        socket = new WebSocket(`${webSocketUrl}:${port}`);
+        socket = new WebSocket(`${webSocketOrigin}`);
 
         // if there is no hash code this is a caller leg
         if (
@@ -445,7 +446,7 @@ window.onload = function init() {
 
           if (callToken === '' || callToken === undefined) {
             alert('meeting code not provided');
-            document.location = `${serverUrl}:${port}`;
+            document.location = `${serverOrigin}`;
           }
           // set location.hash to the unique token for this call
           console.log(callToken);
@@ -1048,15 +1049,15 @@ function createVideoElement() {
   }
   videoContainer.append(vid);
   vid.setAttribute('preload', 'auto');
-  vid.setAttribute('poster', `${serverUrl}:${port}/video/sintel.jpg`);
+  vid.setAttribute('poster', `${serverOrigin}/video/sintel.jpg`);
   //  vid.setAttribute('controls', true);
   vid.className = 'smallVideoM';
   const mp4 = document.createElement('source');
-  mp4.setAttribute('src', `${serverUrl}:${port}/video/sintel.mp4`);
+  mp4.setAttribute('src', `${serverOrigin}/video/sintel.mp4`);
   mp4.setAttribute('type', 'video/mp4');
   vid.append(mp4);
   const webm = document.createElement('source');
-  webm.setAttribute('src', `${serverUrl}:${port}/video/sintel.webm`);
+  webm.setAttribute('src', `${serverOrigin}/video/sintel.webm`);
   webm.setAttribute('type', 'video/webm');
   vid.append(webm);
   vid.innerHTML += "Sorry, your browser doesn't support embedded videos.";
@@ -1178,4 +1179,4 @@ function muteLocalVideo(event) {
   // console.log(`Local video is muted: ${vid.muted}`);
 }
 
-export { peerConnection, partySide, serverUrl, port, callToken };
+export { peerConnection, partySide, callToken };

@@ -12,8 +12,6 @@ NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF OR IN CONNECTION WITH THE US
 OF THIS SOFTWARE.
 */
 
-import { serverUrl, port } from './webrtc.js';
-
 window.onload = function init() {
   let login = document.querySelector('#login');
   login.addEventListener('input', loginInput);
@@ -63,7 +61,7 @@ window.onload = function init() {
       } else {
         localStorage.setItem('replace', 'newVideo');
       }
-      document.location = `${serverUrl}:${port}`;
+      document.location = document.location.origin;
       return true;
     } else {
       alert(
