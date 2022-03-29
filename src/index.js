@@ -24,8 +24,8 @@ const options = {
   // key: readFileSync('../openssl/key.pem', 'utf8'),
   // cert: readFileSync('../openssl/cert.pem', 'utf8'),
   // passphrase: readFileSync('../openssl/passphrase', 'utf8'),
-  pfx: readFileSync('../openssl/treviso.pfx'),
-  passphrase: readFileSync('../openssl/passphrase'),
+  pfx: readFileSync('/etc/scudella/scudella.pfx'),
+  passphrase: readFileSync('/etc/scudella/passphrase'),
 };
 const port = 5000;
 let webrtc_clients = [];
@@ -69,6 +69,9 @@ http_server.on('request', (request, response) => {
   } else if ((matches = request.url.match('^/css/(.*)'))) {
     filePath = path.join(__dirname, '/css/', matches[1]);
     response.writeHead(200, { 'content-type': 'text/css' });
+    readFiles(filePath, response);
+  } else if ((matches = request.url.match('^/favicon.ico'))) {
+    filePath = path.join(__dirname, '/favicon.ico');
     readFiles(filePath, response);
   }
 });

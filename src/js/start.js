@@ -21,21 +21,34 @@ window.onload = function init() {
     const urlField = document.querySelector('#url');
     urlField.value = `${document.location.origin}/#${callToken}`;
   };
+  const inputToken = () => {
+    const inputCode = document.querySelector('.token-form');
+    const urlField = document.querySelector('#url');
+    if (inputCode.value === '') {
+      urlField.value = '';
+      callToken = '';
+    } else {
+      urlField.value = `${document.location.origin}/#${inputCode.value}`;
+    }
+  };
   const videoCall = () => {
     if (callToken === '' || callToken === undefined) {
       // Check if there is a manual setup
       const givenToken = document.querySelector('#givenToken');
       callToken = givenToken.value;
       if (callToken === '' || callToken === undefined) {
-        alert('Please provide a valid entry');
+        document.querySelector('.alert-show').style.opacity = '1';
+        setTimeout(() => {
+          document.querySelector('.alert-show').style.opacity = '0';
+        }, 2000);
       } else {
         // store token to app usage
-        sessionStorage.setItem('callToken', callToken);
+        localStorage.setItem('callToken', callToken);
         document.location = `${document.location.origin}/app.html`;
       }
     } else {
       // store token to app usage
-      sessionStorage.setItem('callToken', callToken);
+      localStorage.setItem('callToken', callToken);
       document.location = `${document.location.origin}/app.html`;
     }
   };
@@ -43,4 +56,6 @@ window.onload = function init() {
   tokenGen.addEventListener('click', processGen);
   const videoButton = document.getElementById('startvideo');
   videoButton.addEventListener('click', videoCall);
+  const inputCode = document.querySelector('.token-form');
+  inputCode.addEventListener('input', inputToken);
 };

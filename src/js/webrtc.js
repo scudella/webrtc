@@ -42,7 +42,7 @@ class PeerConnection {
 
 window.onload = function init() {
   // Load token provided in the home page
-  callToken = sessionStorage.getItem('callToken');
+  callToken = localStorage.getItem('callToken');
   serverOrigin = document.location.origin;
   webSocketOrigin = `wss://${document.location.host}`;
 
