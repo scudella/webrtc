@@ -497,6 +497,33 @@ Video
   align-self: center;
   background: var(--grey-700);
 }
+.position-1 {
+  grid-area: rv-1;
+}
+.position-2 {
+  grid-area: rv-2;
+}
+.position-3 {
+  grid-area: rv-3;
+}
+.position-4 {
+  grid-area: rv-4;
+}
+.position-5 {
+  grid-area: rv-5;
+}
+.position-6 {
+  grid-area: rv-6;
+}
+.position-7 {
+  grid-area: rv-7;
+}
+.position-8 {
+  grid-area: rv-8;
+}
+.position-9 {
+  grid-area: rv-9;
+}
 .sharedVideoContainer {
   grid-area: sh-1;
   max-width: 640px;
@@ -930,6 +957,7 @@ Home Page
   text-align: center;
   display: grid;
   place-items: center;
+  letter-spacing: var(--letterSpacing);
 }
 .alert-show {
   opacity: 0;

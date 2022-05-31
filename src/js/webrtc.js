@@ -24,6 +24,7 @@ let socket;
 let peerConnection;
 let virtualCanvas = null;
 let allMediaStreams = [];
+let senders = [];
 let connection = [];
 let screenReplaceVideo = localStorage.getItem('replace') === 'sameVideo';
 let noVideoCall = false;
@@ -31,6 +32,12 @@ let sharingScreen = false;
 let partySide = '';
 let serverOrigin = '';
 let webSocketOrigin = '';
+const isSFU = false;
+let streamsSFU = [];
+const localVideo = document.getElementById('local_video');
+const index = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9];
+let signalLocal = null;
+let clientLocal = null;
 
 class PeerConnection {
   constructor(callToken, peerConnection, mediaStream) {
@@ -44,172 +51,240 @@ window.onload = function init() {
   // Load token provided in the home page
   callToken = localStorage.getItem('callToken');
   serverOrigin = document.location.origin;
-  webSocketOrigin = `wss://${document.location.host}`;
-
+  if (isSFU) {
+    webSocketOrigin = 'ws://localhost:7000/ws';
+  } else {
+    webSocketOrigin = `wss://${document.location.host}`;
+  }
   let configuration = {
     iceservers: [{ urls: 'stun:stun.l.google.com:19302' }],
   };
-  peerConnection = new RTCPeerConnection(configuration);
-  console.log(`The peerConnection is: ${peerConnection}`);
-  let receivers = peerConnection.getReceivers();
-  // console.log(receivers);
 
-  peerConnection.onicecandidate = function (event) {
-    if (event.candidate) {
-      socket.send(
-        JSON.stringify({
-          token: callToken,
-          type: 'ice-candidate',
-          candidate: event.candidate,
-        })
-      );
-    }
-  };
+  if (isSFU) {
+    signalLocal = new Signal.IonSFUJSONRPCSignal(webSocketOrigin);
+    clientLocal = new IonSDK.Client(signalLocal, configuration);
+    // signalLocal.onopen = () => clientLocal.join(params.has("session") ? params.get("session") : "ion");
+    signalLocal.onopen = () => clientLocal.join('ion');
 
-  // let the "negotiationneeded" event trigger offer generation
-  peerConnection.onnegotiationneeded = async () => {
-    console.log(
-      'Negotiation Needed. IceConnectionState is: ' +
-        peerConnection.iceConnectionState
-    );
-    try {
-      if (peerConnection.iceConnectionState !== 'new') {
-        await peerConnection.setLocalDescription();
-        // send the offer to the other peer
+    clientLocal.ontrack = (track, stream) => {
+      console.log('got track', track.id, 'for stream', stream.id);
+      track.onunmute = () => {
+        // If the stream is not there in the streams map.
+        if (!allMediaStreams[stream.id]) {
+          // Are there any screen positions left?
+          const videoContainer = document.querySelector('#videoContainer');
+          const divContainer = document.createElement('div');
+          if (index.length > 0) {
+            // Create a video element for rendering the stream
+            const remoteVideo = document.createElement('video');
+            remoteVideo.id = 'remote_video';
+            remoteVideo.srcObject = stream;
+            remoteVideo.className = 'smallVideoR';
+            remoteVideo.autoplay = true;
+            // remoteVideo.muted = remoteVideoIsMuted;
+            // remotesDiv.appendChild(remoteVideo);
+            console.log(index);
+            let screenIndex = index.shift();
+            divContainer.className = `remoteVideoContainer position-${
+              screenIndex + 1
+            }`;
+            divContainer.appendChild(remoteVideo);
+            // Insert video in the DOM
+            videoContainer.appendChild(divContainer);
+            // Save the stream and video element in the map.
+            allMediaStreams[stream.id] = {
+              mediaStream: stream,
+              videoElement: remoteVideo,
+              screenIndex,
+            };
+          } else {
+            // No screen positions left.
+            // ignore the stream.
+          }
+
+          // When this stream removes a track, assume
+          // that its going away and remove it.
+          stream.onremovetrack = () => {
+            try {
+              if (allMediaStreams[stream.id]) {
+                console.log('Entered remove track');
+                const { videoElement } = allMediaStreams[stream.id];
+                divContainer.removeChild(videoElement);
+                videoContainer.removeChild(divContainer);
+                index.push(allMediaStreams[stream.id].screenIndex);
+                index.sort();
+                delete allMediaStreams[stream.id];
+              }
+            } catch (err) {}
+          };
+        }
+      };
+    };
+  } else {
+    peerConnection = new RTCPeerConnection(configuration);
+    console.log(`The peerConnection is: ${peerConnection}`);
+    let receivers = peerConnection.getReceivers();
+    // console.log(receivers);
+
+    peerConnection.onicecandidate = function (event) {
+      if (event.candidate) {
         socket.send(
           JSON.stringify({
             token: callToken,
-            type: 'description',
-            sdp: peerConnection.localDescription,
+            type: 'ice-candidate',
+            candidate: event.candidate,
           })
         );
       }
-    } catch (err) {
-      log_error(err);
-    }
-  };
+    };
 
-  peerConnection.ontrack = function (event) {
-    console.log('ontrack called. The event is:');
-    console.log(event);
-    const track = event.track;
-    const type = track.kind;
-    // console.log(type);
-
-    let remoteVideoCreated = allMediaStreams.find(
-      (stream) => stream.videoId === 'remote_video'
-    );
-    let videoShare = allMediaStreams.find(
-      (stream) => stream.videoId === 'video_share'
-    );
-    if (!remoteVideoCreated) {
-      let remote_video = 'remote_video';
-
-      // Create remote video from peer
-      remoteVideoCreated = createVideo(remote_video, event);
-
-      // Save mediaStream from remote
-      allMediaStreams.push({
-        mediaStream: remoteVideoCreated,
-        videoId: 'remote_video',
-      });
-
-      // Enable hangup button
-      let hangup = document.getElementById('hangup');
-      hangup.disabled = false;
-      hangup.addEventListener('click', hangUpCall);
-
-      // Enable mute button
-      let mute = document.querySelector('#mute');
-      mute.disabled = false;
-
-      // Allow video to be shared with remote
-      let shareVideo = document.querySelector('#shareVideo');
-      shareVideo.disabled = false;
-      shareVideo.addEventListener('click', createVideoElement);
-
-      // Allow screen to be shared with remote
-      let shareScreen = document.getElementById('sharescreen');
-      shareScreen.disabled = false;
-      shareScreen.addEventListener('click', sharedScreen);
-
-      // Enable canvas message to be selected
-      let canvasChat = document.getElementById('canvasChat');
-      canvasChat.disabled = false;
-      canvasChat.addEventListener('click', toggleCanvasChat);
-
-      // Remote video has additional streams to add
-    } else if (remoteVideoCreated.mediaStream.id === event.streams[0].id) {
-      document.querySelector('#remote_video').srcObject = event.streams[0];
-      receivers = peerConnection.getReceivers();
-      // console.log(receivers);
-
-      // If on track is not from remote video camera it should be from a video
-      // or screen sharing
-    } else if (!videoShare) {
-      let video_share = 'video_share';
-      videoShare = createVideo(video_share, event);
-      allMediaStreams.push({ mediaStream: videoShare, videoId: 'video_share' });
-      console.log('Shared Video Arrived');
-
-      document.querySelector('#shareVideo').disabled = true;
-
-      if (!screenReplaceVideo) {
-        document.getElementById('sharescreen').disabled = true;
-      }
-      // Check for tracks removed
-      setTimeout(checkRemoveTrack, 1000);
-
-      // video or screen sharing has additional tracks to add
-    } else if (videoShare.mediaStream.id === event.streams[0].id) {
-      document.querySelector('#video_share').srcObject = event.streams[0];
-
-      // track not related with remote camera or video/screen sharing
-    } else {
-      console.log('ontrack received, but not handled:');
-      console.log(event.streams[0].id);
-    }
-  };
-
-  peerConnection.addEventListener(
-    'iceconnectionstatechange',
-    () => {
-      let stateElem = document.querySelector('#call-state');
-      stateElem.className = `${peerConnection.iceConnectionState}-state`;
-
-      {
-        switch (peerConnection.iceConnectionState) {
-          case 'new':
-            console.log(
-              'The ICE agent is gathering addresses or is waiting to be given remote candidates'
-            );
-            break;
-          case 'checking':
-            console.log('The ICE agent is checking candidates.');
-            break;
-          case 'connected':
-            console.log('The ice connection has been established.');
-            break;
-          case 'completed':
-            console.log('ICE has found a connection for all components.');
-            break;
-          case 'closed':
-            console.log('Call closed');
-            closeVideoCall();
-            break;
-          case 'failed':
-            console.log('Call failed');
-            closeVideoCall();
-            break;
-          case 'disconnected':
-            console.log('State disconnected. May be temporary.');
-            break;
+    // let the "negotiationneeded" event trigger offer generation
+    peerConnection.onnegotiationneeded = async () => {
+      console.log(
+        'Negotiation Needed. IceConnectionState is: ' +
+          peerConnection.iceConnectionState
+      );
+      try {
+        if (peerConnection.iceConnectionState !== 'new') {
+          await peerConnection.setLocalDescription();
+          // send the offer to the other peer
+          socket.send(
+            JSON.stringify({
+              token: callToken,
+              type: 'description',
+              sdp: peerConnection.localDescription,
+            })
+          );
         }
+      } catch (err) {
+        log_error(err);
       }
-    },
-    false
-  );
+    };
 
+    peerConnection.ontrack = function (event) {
+      console.log('ontrack called. The event is:');
+      console.log(event);
+      const track = event.track;
+      const type = track.kind;
+      // console.log(type);
+
+      let remoteVideoCreated = allMediaStreams.find(
+        (stream) => stream.videoId === 'remote_video'
+      );
+      let videoShare = allMediaStreams.find(
+        (stream) => stream.videoId === 'video_share'
+      );
+      if (!remoteVideoCreated) {
+        let remote_video = 'remote_video';
+
+        // Create remote video from peer
+        remoteVideoCreated = createVideo(remote_video, event);
+
+        // Save mediaStream from remote
+        allMediaStreams.push({
+          mediaStream: remoteVideoCreated,
+          videoId: 'remote_video',
+        });
+
+        // Enable hangup button
+        let hangup = document.getElementById('hangup');
+        hangup.disabled = false;
+        hangup.addEventListener('click', hangUpCall);
+
+        // Enable mute button
+        let mute = document.querySelector('#mute');
+        mute.disabled = false;
+
+        // Allow video to be shared with remote
+        let shareVideo = document.querySelector('#shareVideo');
+        shareVideo.disabled = false;
+        shareVideo.addEventListener('click', createVideoElement);
+
+        // Allow screen to be shared with remote
+        let shareScreen = document.getElementById('sharescreen');
+        shareScreen.disabled = false;
+        shareScreen.addEventListener('click', sharedScreen);
+
+        // Enable canvas message to be selected
+        let canvasChat = document.getElementById('canvasChat');
+        canvasChat.disabled = false;
+        canvasChat.addEventListener('click', toggleCanvasChat);
+
+        // Remote video has additional streams to add
+      } else if (remoteVideoCreated.mediaStream.id === event.streams[0].id) {
+        document.querySelector('#remote_video').srcObject = event.streams[0];
+        receivers = peerConnection.getReceivers();
+        // console.log(receivers);
+
+        // If on track is not from remote video camera it should be from a video
+        // or screen sharing
+      } else if (!videoShare) {
+        let video_share = 'video_share';
+        videoShare = createVideo(video_share, event);
+        allMediaStreams.push({
+          mediaStream: videoShare,
+          videoId: 'video_share',
+        });
+        console.log('Shared Video Arrived');
+
+        document.querySelector('#shareVideo').disabled = true;
+
+        if (!screenReplaceVideo) {
+          document.getElementById('sharescreen').disabled = true;
+        }
+        // Check for tracks removed
+        setTimeout(checkRemoveTrack, 1000);
+
+        // video or screen sharing has additional tracks to add
+      } else if (videoShare.mediaStream.id === event.streams[0].id) {
+        document.querySelector('#video_share').srcObject = event.streams[0];
+
+        // track not related with remote camera or video/screen sharing
+      } else {
+        console.log('ontrack received, but not handled:');
+        console.log(event.streams[0].id);
+      }
+    };
+
+    peerConnection.addEventListener(
+      'iceconnectionstatechange',
+      () => {
+        let stateElem = document.querySelector('#call-state');
+        stateElem.className = `${peerConnection.iceConnectionState}-state`;
+
+        {
+          switch (peerConnection.iceConnectionState) {
+            case 'new':
+              console.log(
+                'The ICE agent is gathering addresses or is waiting to be given remote candidates'
+              );
+              break;
+            case 'checking':
+              console.log('The ICE agent is checking candidates.');
+              break;
+            case 'connected':
+              console.log('The ice connection has been established.');
+              break;
+            case 'completed':
+              console.log('ICE has found a connection for all components.');
+              break;
+            case 'closed':
+              console.log('Call closed');
+              closeVideoCall();
+              break;
+            case 'failed':
+              console.log('Call failed');
+              closeVideoCall();
+              break;
+            case 'disconnected':
+              console.log('State disconnected. May be temporary.');
+              break;
+          }
+        }
+      },
+      false
+    );
+  }
   const navToggle = document.querySelector('.nav-toggle');
   const links = document.querySelector('.menu');
   navToggle.addEventListener('click', function (evt) {
@@ -225,6 +300,16 @@ window.onload = function init() {
     document.location = `${serverOrigin}/settings.html`;
   });
 
+  const toggleButton = document.getElementById('toggleVideo');
+  toggleButton.addEventListener('click', toggleVideo);
+
+  const constraintSFU = {
+    resolution: 'hd',
+    audio: true,
+    codec: 'vp8',
+    // codec: params.has("codec") ? params.get("codec") : "vp8",
+  };
+
   const constraint = {
     audio: true,
     video: {
@@ -239,274 +324,280 @@ window.onload = function init() {
     },
   };
 
-  const toggleButton = document.getElementById('toggleVideo');
-  toggleButton.addEventListener('click', toggleVideo);
+  // disable toggle video and settings buttons
+  document.getElementById('toggleVideo').disabled = true;
+  // document.getElementById('settings').disabled = true;
 
-  startCall(constraint);
-
-  function toggleVideo() {
-    // Is the button in the no video mode?
-    if (!noVideoCall) {
-      // Call already set to no camera mode
-      // enable camera again
-      noVideoCall = true;
-      // toggle the button background red
-      toggleButton.classList.toggle('mute');
-      let originalStream = null;
-      originalStream = allMediaStreams.find(
-        (stream) => stream.videoId === 'local_video'
-      );
-      // The local media already started?
-      // otherwise, do not do anything else
-      if (originalStream) {
-        // Local media already started
-        if (!virtualCanvas) {
-          // Create the virtual canvas
-          let video = document.getElementById('local_video');
-          let width = video.videoWidth;
-          let height = video.videoHeight;
-          // Create the canvas with the same dimensions of the video to avoid
-          // renegotiation
-          virtualCanvas = Object.assign(document.createElement('canvas'), {
-            width,
-            height,
-          });
-          // draw a rectangule on the canvas
-          virtualCanvas.getContext('2d').fillRect(0, 0, width, height);
-          // capture canvas stream
-          let mediaSource = virtualCanvas.captureStream(10);
-          // store the media information with the sender of local_video
-          allMediaStreams.push({
-            mediaStream: mediaSource,
-            senders: originalStream.senders,
-            videoId: 'canvas',
-          });
-        }
-        const canvasOverlay = document.querySelector('#canvasOverlay');
-        canvasOverlay.classList.add('frontVideo');
-        // if sharing screen is in place do not send canvas
-        if (!sharingScreen) {
-          let canvasStream = allMediaStreams.find(
-            (sender) => sender.videoId === 'canvas'
-          );
-          originalStream.senders
-            .find((sender) => sender.track.kind === 'video')
-            .replaceTrack(canvasStream.mediaStream.getVideoTracks()[0]);
-          // bring the canvas overlay in front of the local video
-        }
-        // set timeout to redraw canvas, otherwise the remote side
-        // does not start the video
-        setTimeout(drawCanvas, 500);
-      }
-      // setting call to no video mode
-    } else {
-      noVideoCall = false;
-      // toggle the button to white
-      toggleButton.classList.toggle('mute');
-      // move the canvas overlay to the back
-      let canvasOverlay = document.querySelector('#canvasOverlay');
-      canvasOverlay.classList.remove('frontVideo');
-      let originalStream = null;
-      // Has the local media already started?
-      originalStream = allMediaStreams.find(
-        (sender) => sender.videoId === 'local_video'
-      );
-
-      if (originalStream) {
-        // local media already started
-        // if sharing screen is in place do not do anything else
-        if (!sharingScreen) {
-          let originalTrack = originalStream.mediaStream.getTracks()[1];
-
-          originalStream.senders
-            .find((sender) => sender.track.kind === 'video')
-            .replaceTrack(originalTrack);
-        }
-      }
-    }
-  }
-
-  function startCall(constraint) {
-    // start button pressed - start local media
-
-    // disable toggle video and settings buttons
-    document.getElementById('toggleVideo').disabled = true;
-    // document.getElementById('settings').disabled = true;
-
-    // getusermedia
+  // getusermedia
+  if (isSFU) {
+    let localStream;
+    IonSDK.LocalStream.getUserMedia(constraintSFU)
+      .then((media) => {
+        localStream = media;
+        localVideo.srcObject = media;
+        localVideo.autoplay = true;
+        localVideo.controls = true;
+        localVideo.muted = true;
+        // joinBtns.style.display = "none";
+        clientLocal.publish(media);
+        // save local media in the peer connection object
+        allMediaStreams[media.id] = {
+          mediaStream: media,
+          senders: null,
+          videoId: 'local_video',
+          videoElement: localVideo,
+        };
+      })
+      .catch(console.error);
+  } else {
     navigator.mediaDevices
       .getUserMedia(constraint)
       .then(function (stream) {
+        console.log('stream', stream);
         // start with the audio stream muted
         stream.getAudioTracks()[0].enabled = false;
         // add full screen handling
-        let video = document.getElementById('local_video');
-        video.addEventListener('dblclick', videoDblClick);
-        video.style.backgroundColor = 'transparent';
+        localVideo.addEventListener('dblclick', videoDblClick);
+        localVideo.style.backgroundColor = 'transparent';
         // start stream in the local video
-        video.srcObject = stream;
-        video.play();
-
+        localVideo.srcObject = stream;
+        localVideo.play();
         // save senders for easy replacing later
-        let senders = [];
         stream
           .getTracks()
           .forEach((track) =>
             senders.push(peerConnection.addTrack(track, stream))
           );
-
         // save local media in the peer connection object
-        allMediaStreams.push({
+        allMediaStreams[streams.id] = {
           mediaStream: stream,
           senders: senders,
           videoId: 'local_video',
-        });
-
-        // if no video mode selected send canvas stream instead
-        // wait video to start to touch it
-        if (noVideoCall) {
-          video.oncanplay = canvasCreateStream;
-        }
-        function canvasCreateStream() {
-          // create canvas with the same video dimensions to avoid
-          // renegotiation
-          let width = video.videoWidth;
-          let height = video.videoHeight;
-          virtualCanvas = Object.assign(document.createElement('canvas'), {
-            width,
-            height,
-          });
-          // console.log(`width: ${width}, height: ${height}`);
-          // draw a rectangule on the whole canvas
-          virtualCanvas.getContext('2d').fillRect(0, 0, width, height);
-
-          // capture canvas stream
-          let mediaSource = virtualCanvas.captureStream();
-          // capture black rectangule from the canvas
-          let blackVideoTrack = mediaSource.getVideoTracks()[0];
-          // console.log('black video track:');
-          // console.log(blackVideoTrack);
-          let noVideoStream = allMediaStreams.find(
-            (stream) => stream.videoId === 'local_video'
-          );
-          // store canvas information on peer connection object
-          // senders from the local_video
-          allMediaStreams.push({
-            mediaStream: mediaSource,
-            senders: noVideoStream.senders,
-            videoId: 'canvas',
-          });
-          // console.log('noVideoStream stream is: ');
-          // console.log(noVideoStream);
-          // replace local media video stream with canvas stream
-          noVideoStream.senders
-            .find((sender) => sender.track.kind === 'video')
-            .replaceTrack(blackVideoTrack);
-
-          // Let the canvas overlay the local_video
-          // with the same virtual canvas sent to the peer.
-          let canvasOverlay = document.querySelector('#canvasOverlay');
-          canvasOverlay.classList.add('frontVideo');
-
-          // toggle video is enabled again
-          document.getElementById('toggleVideo').disabled = false;
-          // set timeout to redraw canvas every 100 ms
-          // or remote video may not start
-          setTimeout(drawCanvas, 100);
-          virtualCanvas.getContext('2d').fillRect(0, 0, width, height);
-        }
-
-        // toggle video button is enabled
-        document.getElementById('toggleVideo').disabled = false;
-        let mute = document.querySelector('#mute');
-        // create event listener to toggle audio
-        mute.addEventListener('click', muteLocalVideo);
-
-        // create webSocket. The nodejs index.js application will handle it
-        // it currently handles http and ws
-        socket = new WebSocket(`${webSocketOrigin}`);
-
-        // if there is no hash code this is a caller leg
-        if (
-          document.location.hash === '' ||
-          document.location.hash === undefined
-        ) {
-          // Caller leg
-          partySide = 'caller';
-
-          if (dataChannel === null) {
-            setDataChannel();
-          }
-
-          connection.push = new PeerConnection(
-            callToken,
-            peerConnection,
-            allMediaStreams
-          );
-
-          if (callToken === '' || callToken === undefined) {
-            alert('meeting code not provided');
-            document.location = `${serverOrigin}`;
-          }
-          // set location.hash to the unique token for this call
-          console.log(callToken);
-          document.location.hash = callToken;
-
-          socket.onopen = function () {
-            socket.onmessage = callerSignalling;
-
-            socket.send(
-              JSON.stringify({
-                token: callToken,
-                type: 'join',
-              })
-            );
-          };
-
-          document.title = 'Caller Leg';
-        } else {
-          // Callee Leg
-          partySide = 'callee';
-          // Set listeners for data channel
-          peerConnection.ondatachannel = onDataChannel;
-
-          callToken = document.location.hash;
-          callToken = callToken.slice(1);
-
-          connection.push = new PeerConnection(
-            callToken,
-            peerConnection,
-            allMediaStreams
-          );
-
-          socket.onopen = function () {
-            socket.onmessage = calleeSignalling;
-
-            // This message is for the server link me to the token
-            socket.send(
-              JSON.stringify({
-                token: callToken,
-                type: 'join',
-              })
-            );
-
-            // let the peer know this leg is ready to start the call
-            socket.send(
-              JSON.stringify({
-                token: callToken,
-                type: 'callee_arrived',
-              })
-            );
-          };
-
-          document.title = 'Callee Leg';
-        }
+          videoElement: localVideo,
+        };
       })
       .catch(handleGetUserMediaError);
+
+    // if no video mode selected send canvas stream instead
+    // wait video to start to touch it
+    if (noVideoCall) {
+      video.oncanplay = canvasCreateStream;
+    }
+    function canvasCreateStream() {
+      // create canvas with the same video dimensions to avoid
+      // renegotiation
+      let width = video.videoWidth;
+      let height = video.videoHeight;
+      virtualCanvas = Object.assign(document.createElement('canvas'), {
+        width,
+        height,
+      });
+      // console.log(`width: ${width}, height: ${height}`);
+      // draw a rectangule on the whole canvas
+      virtualCanvas.getContext('2d').fillRect(0, 0, width, height);
+
+      // capture canvas stream
+      let mediaSource = virtualCanvas.captureStream();
+      // capture black rectangule from the canvas
+      let blackVideoTrack = mediaSource.getVideoTracks()[0];
+      // console.log('black video track:');
+      // console.log(blackVideoTrack);
+      let noVideoStream = allMediaStreams.find(
+        (stream) => stream.videoId === 'local_video'
+      );
+      // store canvas information on peer connection object
+      // senders from the local_video
+      allMediaStreams[mediaSource.id] = {
+        mediaStream: mediaSource,
+        senders: noVideoStream.senders,
+        videoId: 'canvas',
+      };
+      // console.log('noVideoStream stream is: ');
+      // console.log(noVideoStream);
+      // replace local media video stream with canvas stream
+      noVideoStream.senders
+        .find((sender) => sender.track.kind === 'video')
+        .replaceTrack(blackVideoTrack);
+
+      // Let the canvas overlay the local_video
+      // with the same virtual canvas sent to the peer.
+      let canvasOverlay = document.querySelector('#canvasOverlay');
+      canvasOverlay.classList.add('frontVideo');
+
+      // toggle video is enabled again
+      document.getElementById('toggleVideo').disabled = false;
+      // set timeout to redraw canvas every 100 ms
+      // or remote video may not start
+      setTimeout(drawCanvas, 100);
+      virtualCanvas.getContext('2d').fillRect(0, 0, width, height);
+    }
+
+    // toggle video button is enabled
+    document.getElementById('toggleVideo').disabled = false;
+    let mute = document.querySelector('#mute');
+    // create event listener to toggle audio
+    mute.addEventListener('click', muteLocalVideo);
+
+    // create webSocket. The nodejs index.js application will handle it
+    // it currently handles http and ws
+    socket = new WebSocket(`${webSocketOrigin}`);
+
+    // if there is no hash code this is a caller leg
+    if (document.location.hash === '' || document.location.hash === undefined) {
+      // Caller leg
+      partySide = 'caller';
+
+      if (dataChannel === null) {
+        setDataChannel();
+      }
+
+      connection.push = new PeerConnection(
+        callToken,
+        peerConnection,
+        allMediaStreams
+      );
+
+      if (callToken === '' || callToken === undefined) {
+        alert('meeting code not provided');
+        document.location = `${serverOrigin}`;
+      }
+      // set location.hash to the unique token for this call
+      console.log(callToken);
+      document.location.hash = callToken;
+
+      socket.onopen = function () {
+        socket.onmessage = callerSignalling;
+
+        socket.send(
+          JSON.stringify({
+            token: callToken,
+            type: 'join',
+          })
+        );
+      };
+
+      document.title = 'Caller Leg';
+    } else {
+      // Callee Leg
+      partySide = 'callee';
+      // Set listeners for data channel
+      peerConnection.ondatachannel = onDataChannel;
+
+      callToken = document.location.hash;
+      callToken = callToken.slice(1);
+
+      connection.push = new PeerConnection(
+        callToken,
+        peerConnection,
+        allMediaStreams
+      );
+
+      socket.onopen = function () {
+        socket.onmessage = calleeSignalling;
+
+        // This message is for the server link me to the token
+        socket.send(
+          JSON.stringify({
+            token: callToken,
+            type: 'join',
+          })
+        );
+
+        // let the peer know this leg is ready to start the call
+        socket.send(
+          JSON.stringify({
+            token: callToken,
+            type: 'callee_arrived',
+          })
+        );
+      };
+
+      document.title = 'Callee Leg';
+    }
   }
 };
-
 /* functions used above are defined below */
+function toggleVideo() {
+  // Is the button in the no video mode?
+  if (!noVideoCall) {
+    // Call already set to no camera mode
+    // enable camera again
+    noVideoCall = true;
+    // toggle the button background red
+    toggleButton.classList.toggle('mute');
+    let originalStream = null;
+    originalStream = allMediaStreams.find(
+      (stream) => stream.videoId === 'local_video'
+    );
+    // The local media already started?
+    // otherwise, do not do anything else
+    if (originalStream) {
+      // Local media already started
+      if (!virtualCanvas) {
+        // Create the virtual canvas
+        let video = document.getElementById('local_video');
+        let width = video.videoWidth;
+        let height = video.videoHeight;
+        // Create the canvas with the same dimensions of the video to avoid
+        // renegotiation
+        virtualCanvas = Object.assign(document.createElement('canvas'), {
+          width,
+          height,
+        });
+        // draw a rectangule on the canvas
+        virtualCanvas.getContext('2d').fillRect(0, 0, width, height);
+        // capture canvas stream
+        let mediaSource = virtualCanvas.captureStream(10);
+        // store the media information with the sender of local_video
+        allMediaStreams[mediaSource.id] = {
+          mediaStream: mediaSource,
+          senders: originalStream.senders,
+          videoId: 'canvas',
+        };
+      }
+      const canvasOverlay = document.querySelector('#canvasOverlay');
+      canvasOverlay.classList.add('frontVideo');
+      // if sharing screen is in place do not send canvas
+      if (!sharingScreen) {
+        let canvasStream = allMediaStreams.find(
+          (sender) => sender.videoId === 'canvas'
+        );
+        originalStream.senders
+          .find((sender) => sender.track.kind === 'video')
+          .replaceTrack(canvasStream.mediaStream.getVideoTracks()[0]);
+        // bring the canvas overlay in front of the local video
+      }
+      // set timeout to redraw canvas, otherwise the remote side
+      // does not start the video
+      setTimeout(drawCanvas, 500);
+    }
+    // setting call to no video mode
+  } else {
+    noVideoCall = false;
+    // toggle the button to white
+    toggleButton.classList.toggle('mute');
+    // move the canvas overlay to the back
+    let canvasOverlay = document.querySelector('#canvasOverlay');
+    canvasOverlay.classList.remove('frontVideo');
+    let originalStream = null;
+    // Has the local media already started?
+    originalStream = allMediaStreams.find(
+      (sender) => sender.videoId === 'local_video'
+    );
+
+    if (originalStream) {
+      // local media already started
+      // if sharing screen is in place do not do anything else
+      if (!sharingScreen) {
+        let originalTrack = originalStream.mediaStream.getTracks()[1];
+
+        originalStream.senders
+          .find((sender) => sender.track.kind === 'video')
+          .replaceTrack(originalTrack);
+      }
+    }
+  }
+}
 
 function drawCanvas() {
   let ctx = virtualCanvas.getContext('2d');
@@ -798,7 +889,7 @@ function checkRemoveTrack() {
 function closeVideoCall() {
   console.log('Closing Video Call');
   const remoteVideo = document.getElementById('remote_video');
-  const localVideo = document.getElementById('local_video');
+  // const localVideo = document.getElementById('local_video');
   const callState = document.querySelector('#call-state');
 
   if (peerConnection) {
@@ -909,11 +1000,11 @@ function sharedScreen() {
             screenSender.push(peerConnection.addTrack(track, stream))
           );
         // store media stream in peer connection object
-        allMediaStreams.push({
+        allMediaStreams[stream.id] = {
           mediaStream: stream,
           senders: screenSender,
           videoId: 'screen',
-        });
+        };
         // disable share video buttons
         document.querySelector('#shareVideo').disabled = true;
 
@@ -984,11 +1075,11 @@ function setupCaptureStream(myVideoStream) {
 
   console.log(senderSharedVideo);
   // store media stream object in peer connection
-  allMediaStreams.push({
+  allMediaStreams[myVideoStream.id] = {
     mediaStream: myVideoStream,
     senders: senderSharedVideo,
     videoId: 'myVideo',
-  });
+  };
 
   // console.log("RTCRtpSender is: " + senderSharedVideo);
 

@@ -58,4 +58,7 @@ window.onload = function init() {
   videoButton.addEventListener('click', videoCall);
   const inputCode = document.querySelector('.token-form');
   inputCode.addEventListener('input', inputToken);
+  const date = document.querySelector('#date');
+  // set year
+  date.innerHTML = new Date().getFullYear();
 };
