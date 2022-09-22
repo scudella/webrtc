@@ -73,6 +73,9 @@ http_server.on('request', (request, response) => {
   } else if ((matches = request.url.match('^/favicon.ico'))) {
     filePath = path.join(__dirname, '/favicon.ico');
     readFiles(filePath, response);
+  } else if ((matches = request.url.match('^/robots.txt'))) {
+    filePath = path.join(__dirname, '/robots.txt');
+    readFiles(filePath, response);
   }
 });
 
