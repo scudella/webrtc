@@ -3,3 +3,4 @@ Disallow: /nogooglebot/
 
 User-agent: *
 Allow: /
+Host: https://scudella.net.br
