@@ -1,18 +1,23 @@
 require('dotenv').config();
 const path = require('path');
-const https = require('https');
 const { readFileSync } = require('fs');
+
+// protocols
+const https = require('https');
 const websocket = require('websocket').server;
-require('express-async-errors');
 
 const credentials = {
   pfx: readFileSync('/etc/scudella/scudella.pfx'),
   passphrase: readFileSync('/etc/scudella/passphrase'),
 };
 
+require('express-async-errors');
 // express
 const express = require('express');
 const app = express();
+
+// database
+const connectDB = require('./db/connect');
 
 // other packages
 const morgan = require('morgan');
@@ -40,6 +45,8 @@ app.use(cors());
 app.use(xss());
 
 app.use(morgan('tiny'));
+
+// go through all middleware
 app.use(express.json());
 
 // setup static and middleware
@@ -53,6 +60,7 @@ const httpsServer = https.createServer(credentials, app);
 const port = process.env.PORT || 5000;
 const start = async () => {
   try {
+    await connectDB(process.env.MONGO_URL);
     httpsServer.listen(
       port,
       console.log(`Server is listening on port ${port}...`)
