@@ -21,10 +21,15 @@ const connectDB = require('./db/connect');
 
 // other packages
 const morgan = require('morgan');
+const cookieParser = require('cookie-parser');
 const rateLimiter = require('express-rate-limit');
 const helmet = require('helmet');
 const xss = require('xss-clean');
 const cors = require('cors');
+
+// routers
+
+const authRouter = require('./routes/authRoutes');
 
 // middleware
 const notFoundMiddleware = require('./middleware/not-found');
@@ -48,9 +53,17 @@ app.use(morgan('tiny'));
 
 // go through all middleware
 app.use(express.json());
+app.use(cookieParser(process.env.JWT_SECRET));
 
 // setup static and middleware
 app.use(express.static('./public'));
+
+app.get('/api/v1', (req, res) => {
+  console.log(req.signedCookies);
+  res.send('webrtc');
+});
+
+app.use('/api/v1/auth', authRouter);
 
 app.use(notFoundMiddleware);
 app.use(errorHandlerMiddleware);
