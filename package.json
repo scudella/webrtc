@@ -1,6 +1,6 @@
 {
   "name": "webrtc",
-  "version": "2.1.1",
+  "version": "2.5.1",
   "description": "WebRTC app",
   "main": "app.js",
   "scripts": {

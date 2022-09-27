@@ -19,6 +19,6 @@ router
 router.route('/showMe').get(authenticateUser, showCurrentUser);
 router.route('/updateUser').patch(authenticateUser, updateUser);
 router.route('/updateUserPassword').patch(authenticateUser, updateUserPassword);
-router.route('/:id').get(authenticateUser, getSingleUser); // needs to come after showMe
+router.route('/:id').get(authenticateUser, getSingleUser); // needs to come last
 
 module.exports = router;
