@@ -11,29 +11,35 @@ WHATSOEVER RESULTING FROM LOSS OF USE, DATA OR PROFITS, WHETHER IN AN ACTION OF 
 NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF OR IN CONNECTION WITH THE USE OR PERFORMANCE 
 OF THIS SOFTWARE.
 */
+let callToken = '';
 window.onload = function init() {
-  const videoButton = document.getElementById('startvideo');
-  const inputCode = document.querySelector('.token-form');
+  const logoutButton = document.getElementById('logout');
+  const givenToken = document.querySelector('#givenToken');
   const urlField = document.querySelector('#url');
+  const inputCode = document.querySelector('.token-form');
+  const tokenGen = document.querySelector('#tokenGen');
+  const videoButton = document.getElementById('startvideo');
+  const avatar = document.querySelector('.user');
+  const alert = document.querySelector('.alert-show');
   const codeCopy = document.getElementById('codeCopy');
   const codeCheck = document.getElementById('codeCheck');
   const urlCopy = document.getElementById('urlCopy');
   const urlCheck = document.getElementById('urlCheck');
+
+  const processGen = () => {
+    callToken = Date.now() + '-' + Math.round(Math.random() * 10000);
+    givenToken.value = callToken;
+    urlField.value = `${document.location.origin}/app/#${callToken}`;
+  };
   const fetchUser = async () => {
     try {
       const response = await axios.get(`/api/v1/users/showMe`);
-      document.location = `${document.location.origin}/meeting/`;
+      const user = response.data.user;
+      // store user to local storage
+      localStorage.setItem('user', JSON.stringify(user));
     } catch (error) {
-      console.log(error);
-    }
-  };
-
-  const inputURL = () => {
-    const result = urlField.value.match(/#[A-Za-z0-9-]+/);
-    if (result) {
-      inputCode.value = result[0].substring(1);
-    } else {
-      inputCode.value = '';
+      localStorage.setItem('user', '');
+      document.location = `${document.location.origin}`;
     }
   };
 
@@ -42,21 +48,42 @@ window.onload = function init() {
     if (result) {
       inputCode.value = result[0];
       urlField.value = `${document.location.origin}/app/#${inputCode.value}`;
+      callToken = inputCode.value;
     } else {
       urlField.value = '';
       inputCode.value = '';
+      callToken = '';
     }
   };
   const videoCall = () => {
-    if (!inputCode.value) {
-      document.querySelector('.alert-show').style.opacity = '1';
+    if (!callToken) {
+      alert.textContent = 'Please, provide a meeting code';
+      alert.style.opacity = '1';
       setTimeout(() => {
-        document.querySelector('.alert-show').style.opacity = '0';
+        alert.style.opacity = '0';
       }, 2000);
     } else {
-      // store token to app usage
-      localStorage.setItem('callToken', inputCode.value);
-      document.location = `${document.location.origin}/app/#${inputCode.value}`;
+      if (callToken.length < 8) {
+        alert.textContent = 'Meeting code minimum length is 8';
+        alert.style.opacity = '1';
+        setTimeout(() => {
+          alert.style.opacity = '0';
+        }, 2000);
+      } else {
+        // store token to app usage
+        localStorage.setItem('callToken', callToken);
+        document.location = `${document.location.origin}/app/`;
+      }
+    }
+  };
+
+  const logoutUser = async () => {
+    try {
+      await axios.delete('/api/v1/auth/logout');
+      localStorage.removeItem('user');
+      document.location = `${document.location.origin}`;
+    } catch (error) {
+      console.log(error);
     }
   };
 
@@ -80,10 +107,16 @@ window.onload = function init() {
     }, 2000);
   };
 
+  tokenGen.addEventListener('click', processGen);
   videoButton.addEventListener('click', videoCall);
   inputCode.addEventListener('input', inputToken);
-  urlField.addEventListener('input', inputURL);
+  const user = JSON.parse(localStorage.getItem('user'));
+  logoutButton.addEventListener('click', logoutUser);
   codeCopy.addEventListener('click', codeToClip);
   urlCopy.addEventListener('click', urlToClip);
+
+  if (user) {
+    avatar.innerText = user.name;
+  }
   fetchUser();
 };

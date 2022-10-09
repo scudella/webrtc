@@ -1,0 +1,111 @@
+<!--  Copyright (c) 2022 Eduardo S. Libardi, All rights reserved. 
+
+Permission to use, copy, modify, and/or distribute this software for any purpose with or 
+without fee is hereby granted, provided that the above copyright notice and this permission 
+notice appear in all copies.
+
+THE SOFTWARE IS PROVIDED "AS IS" AND THE AUTHOR DISCLAIMS ALL WARRANTIES WITH REGARD TO THIS 
+SOFTWARE INCLUDING ALL IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS. IN NO EVENT SHALL 
+THE AUTHOR BE LIABLE FOR ANY SPECIAL, DIRECT, INDIRECT, OR CONSEQUENTIAL DAMAGES OR ANY DAMAGES 
+WHATSOEVER RESULTING FROM LOSS OF USE, DATA OR PROFITS, WHETHER IN AN ACTION OF CONTRACT, 
+NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF OR IN CONNECTION WITH THE USE OR PERFORMANCE 
+OF THIS SOFTWARE. -->
+
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>WebRTC | Register Page</title>
+    <!-- font awesome -->
+    <link
+      rel="stylesheet"
+      href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.2.0/css/all.min.css"
+    />
+    <!-- js script -->
+    <script src="https://unpkg.com/axios/dist/axios.min.js"></script>
+    <script type="module" src="../js/register.js"></script>
+    <!-- css -->
+    <link rel="stylesheet" href="../css/style.css" />
+  </head>
+  <body>
+    <nav>
+      <div class="nav-center">
+        <div class="nav-header">
+          <a href="/">
+            <img src="../images/logo.svg" class="logo" alt="logo" />
+          </a>
+        </div>
+      </div>
+    </nav>
+    <main>
+      <header class="hero-index"></header>
+      <section class="page no-page">
+        <div class="page-center">
+          <div class="loading"></div>
+        </div>
+      </section>
+      <section class="meeting">
+        <div class="meeting-center">
+          <div class="form-container">
+            <div class="alertCodeNotProvided">
+              <p class="alert alert-show alert-top"></p>
+            </div>
+            <form class="form form-padding form-opacity">
+              <!-- single form row -->
+              <div class="form-row">
+                <label for="name" class="form-label"> Name </label>
+                <input
+                  class="form-input"
+                  type="text"
+                  name="name"
+                  id="name"
+                  required
+                />
+              </div>
+              <!-- end of single form row -->
+              <!-- single form row -->
+              <div class="form-row">
+                <label for="email" class="form-label"> Email </label>
+                <input
+                  class="form-input"
+                  type="email"
+                  name="email"
+                  id="email"
+                  required
+                />
+              </div>
+              <!-- end of single form row -->
+
+              <!-- single form row -->
+              <div class="form-row">
+                <label for="password" class="form-label"> Password </label>
+                <input
+                  class="form-input"
+                  type="password"
+                  name="password"
+                  id="password"
+                  required
+                />
+              </div>
+              <!-- end of single form row -->
+              <button type="submit" class="btn btn-block btn-login">
+                Register
+              </button>
+              <p class="p-login">
+                Already have an account?
+                <a href="../login/" class="register-link">Log in</a>
+              </p>
+            </form>
+          </div>
+        </div>
+      </section>
+    </main>
+    <!-- footer -->
+    <footer class="footer">
+      <p>
+        &copy; <span id="date"></span> Eduardo S. Libardi. all rights reserved
+      </p>
+    </footer>
+  </body>
+</html>

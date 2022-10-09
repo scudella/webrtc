@@ -16,7 +16,7 @@ OF THIS SOFTWARE. -->
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>WebRTC | Home Page</title>
+    <title>WebRTC | Meeting Page</title>
     <!-- font awesome -->
     <link
       rel="stylesheet"
@@ -24,21 +24,23 @@ OF THIS SOFTWARE. -->
     />
     <!-- js script -->
     <script src="https://unpkg.com/axios/dist/axios.min.js"></script>
-    <script type="module" src="js/start.js"></script>
+    <script type="module" src="../js/meeting.js"></script>
     <!-- css -->
-    <link rel="stylesheet" href="css/style.css" />
+    <link rel="stylesheet" href="../css/style.css" />
   </head>
   <body>
     <nav>
       <div class="nav-center">
         <div class="nav-header">
-          <a href="/"> <img src="images/logo.svg" class="logo" alt="logo" /></a>
+          <a href="/">
+            <img src="../images/logo.svg" class="logo" alt="logo" />
+          </a>
           <ul class="nav-links">
+            <li class="user"></li>
             <li>
-              <a href="login/">login</a>
-            </li>
-            <li>
-              <a href="register/">register</a>
+              <button type="button" id="logout" class="btn btn-small">
+                logout
+              </button>
             </li>
           </ul>
         </div>
@@ -55,10 +57,12 @@ OF THIS SOFTWARE. -->
               </p>
             </div>
             <form id="form" class="form form-padding">
-              <h3>Enter a meeting</h3>
+              <h3>Start a new meeting</h3>
               <!-- Token Input -->
               <div class="form-row">
-                <label for="givenToken" class="form-label">enter code: </label>
+                <label for="givenToken" class="form-label">
+                  or enter code:
+                </label>
                 <div class="copy">
                   <input
                     type="text"
@@ -76,17 +80,17 @@ OF THIS SOFTWARE. -->
                   ></i>
                 </div>
               </div>
-              <!-- URL -->
               <div class="form-row">
-                <label for="url" class="form-label">URL: </label>
+                <label for="url" class="form-label"> URL: </label>
                 <div class="copy">
                   <input
                     type="url"
                     name="url"
                     id="url"
                     maxlength="50"
+                    disabled
                     class="form-input"
-                    min-length="34"
+                    placeholder="send this URL to the other parties"
                   />
                   <i id="urlCopy" class="fa-regular fa-copy copy-item"></i>
                   <i
@@ -95,9 +99,15 @@ OF THIS SOFTWARE. -->
                   ></i>
                 </div>
               </div>
-              <div class="button-start button-alone">
+              <div class="button-start">
+                <button id="tokenGen" class="btn btn-gen" type="button">
+                  Meeting Code
+                </button>
                 <button id="startvideo" type="button" class="btn-start">
-                  <img src="images/play-svgrepo-com.svg" alt="Start Button" />
+                  <img
+                    src="../images/play-svgrepo-com.svg"
+                    alt="Start Button"
+                  />
                 </button>
               </div>
             </form>

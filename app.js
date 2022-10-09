@@ -46,11 +46,17 @@ app.use(
   })
 );
 
-app.use(helmet());
+app.use(
+  helmet.contentSecurityPolicy({
+    directives: {
+      scriptSrc: ["'self'", 'https://unpkg.com/axios/dist/axios.min.js'],
+    },
+  })
+);
 app.use(cors());
 app.use(xss());
 
-// app.use(morgan('tiny'));
+app.use(morgan('tiny'));
 
 // go through all middleware
 app.use(express.json());
