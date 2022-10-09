@@ -14,9 +14,8 @@ OF THIS SOFTWARE.
 let callToken = '';
 window.onload = function init() {
   const logoutButton = document.getElementById('logout');
-  const givenToken = document.querySelector('#givenToken');
   const urlField = document.querySelector('#url');
-  const inputCode = document.querySelector('.token-form');
+  const inputCode = document.querySelector('#givenToken');
   const tokenGen = document.querySelector('#tokenGen');
   const videoButton = document.getElementById('startvideo');
   const avatar = document.querySelector('.user');
@@ -28,7 +27,7 @@ window.onload = function init() {
 
   const processGen = () => {
     callToken = Date.now() + '-' + Math.round(Math.random() * 10000);
-    givenToken.value = callToken;
+    inputCode.value = callToken;
     urlField.value = `${document.location.origin}/app/#${callToken}`;
   };
   const fetchUser = async () => {
@@ -88,7 +87,7 @@ window.onload = function init() {
   };
 
   const codeToClip = async () => {
-    await navigator.clipboard.writeText(givenToken.value);
+    await navigator.clipboard.writeText(inputCode.value);
     codeCopy.classList.add('no-copy');
     codeCheck.classList.remove('no-copy');
     setTimeout(() => {

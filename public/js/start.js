@@ -13,7 +13,7 @@ OF THIS SOFTWARE.
 */
 window.onload = function init() {
   const videoButton = document.getElementById('startvideo');
-  const inputCode = document.querySelector('.token-form');
+  const inputCode = document.querySelector('#givenToken');
   const urlField = document.querySelector('#url');
   const codeCopy = document.getElementById('codeCopy');
   const codeCheck = document.getElementById('codeCheck');
@@ -61,7 +61,7 @@ window.onload = function init() {
   };
 
   const codeToClip = async () => {
-    await navigator.clipboard.writeText(givenToken.value);
+    await navigator.clipboard.writeText(inputCode.value);
     codeCopy.classList.add('no-copy');
     codeCheck.classList.remove('no-copy');
     setTimeout(() => {
