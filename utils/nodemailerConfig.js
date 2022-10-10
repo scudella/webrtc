@@ -10,4 +10,9 @@ module.exports = {
   tls: {
     rejectUnauthorized: false,
   },
+  dkim: {
+    domainName: process.env.DOMAIN_NAME,
+    keySelector: process.env.KEY_SELECTOR,
+    privateKey: process.env.PRIVATE_KEY,
+  },
 };
