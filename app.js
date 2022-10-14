@@ -31,6 +31,7 @@ const cors = require('cors');
 
 const authRouter = require('./routes/authRoutes');
 const userRouter = require('./routes/userRoutes');
+const meetingRouter = require('./routes/meetingRoutes');
 
 // middleware
 const notFoundMiddleware = require('./middleware/not-found');
@@ -67,6 +68,7 @@ app.use(express.static('./public'));
 
 app.use('/api/v1/auth', authRouter);
 app.use('/api/v1/users', userRouter);
+app.use('/api/v1/meeting', meetingRouter);
 
 app.use(notFoundMiddleware);
 app.use(errorHandlerMiddleware);
