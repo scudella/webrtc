@@ -40,6 +40,17 @@ window.onload = function init() {
       const user = response.data.user;
       // store user to local storage
       localStorage.setItem('user', JSON.stringify(user));
+      // get room already created
+      try {
+        const response = await axios.get(`/api/v1/meeting/show-my-room`);
+        inputCode.value = response.data.room;
+        urlField.value = `${document.location.origin}/app/#${inputCode.value}`;
+        callToken = inputCode.value;
+      } catch (error) {
+        axios.isAxiosError(error)
+          ? console.log(error.response.data.msg)
+          : console.log(error);
+      }
     } catch (error) {
       localStorage.setItem('user', '');
       document.location = `${document.location.origin}`;
@@ -178,6 +189,9 @@ window.onload = function init() {
     tokenGen.disabled = true;
     urlField.disabled = false;
     create = false;
+    inputCode.value = '';
+    urlField.value = '';
+    callToken = '';
   };
 
   tokenGen.addEventListener('click', processGen);

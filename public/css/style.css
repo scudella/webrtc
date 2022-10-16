@@ -1031,6 +1031,7 @@ Home, register, login ... and Meeting Page
 .btn-gen:disabled {
   background-color: var(--grey-500);
   opacity: 0.3;
+  cursor: default;
 }
 
 /*

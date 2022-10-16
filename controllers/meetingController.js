@@ -60,4 +60,14 @@ const updateRoom = async (req, res) => {
   }
 };
 
-module.exports = { updateRoom };
+const showMyRoom = async (req, res) => {
+  const { userId } = req.user;
+  const existingRoom = await Room.findOne({ user: userId });
+  if (existingRoom) {
+    res.status(StatusCodes.OK).json({ room: existingRoom.name });
+  } else {
+    throw new CustomError.NotFoundError('No meeting created');
+  }
+};
+
+module.exports = { updateRoom, showMyRoom };
