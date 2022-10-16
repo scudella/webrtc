@@ -11,8 +11,9 @@ WHATSOEVER RESULTING FROM LOSS OF USE, DATA OR PROFITS, WHETHER IN AN ACTION OF 
 NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF OR IN CONNECTION WITH THE USE OR PERFORMANCE 
 OF THIS SOFTWARE.
 */
-let callToken = '';
 window.onload = function init() {
+  let callToken = '';
+  let create = true;
   const logoutButton = document.getElementById('logout');
   const urlField = document.querySelector('#url');
   const inputCode = document.querySelector('#givenToken');
@@ -24,6 +25,9 @@ window.onload = function init() {
   const codeCheck = document.getElementById('codeCheck');
   const urlCopy = document.getElementById('urlCopy');
   const urlCheck = document.getElementById('urlCheck');
+  const btnCreate = document.getElementById('btn-create');
+  const btnJoin = document.getElementById('btn-join');
+  const meetTitle = document.getElementById('meet-title');
 
   const processGen = () => {
     callToken = Date.now() + '-' + Math.round(Math.random() * 10000);
@@ -42,6 +46,18 @@ window.onload = function init() {
     }
   };
 
+  const inputURL = () => {
+    const result = urlField.value.match(/#[A-Za-z0-9-]+/);
+    if (result) {
+      inputCode.value = result[0].substring(1);
+      callToken = inputCode.value;
+    } else {
+      urlField.value = '';
+      inputCode.value = '';
+      callToken = '';
+    }
+  };
+
   const inputToken = () => {
     const result = inputCode.value.match(/[A-Za-z0-9-]+/);
     if (result) {
@@ -54,24 +70,65 @@ window.onload = function init() {
       callToken = '';
     }
   };
-  const videoCall = () => {
+  const videoCall = async () => {
     if (!callToken) {
+      alert.classList.add('alert-danger');
       alert.textContent = 'Please, provide a meeting code';
       alert.style.opacity = '1';
       setTimeout(() => {
         alert.style.opacity = '0';
+        alert.classList.remove('alert-danger');
       }, 2000);
     } else {
       if (callToken.length < 8) {
+        alert.classList.add('alert-danger');
         alert.textContent = 'Meeting code minimum length is 8';
         alert.style.opacity = '1';
         setTimeout(() => {
           alert.style.opacity = '0';
+          alert.classList.remove('alert-danger');
         }, 2000);
       } else {
-        // store token to app usage
-        localStorage.setItem('callToken', callToken);
-        document.location = `${document.location.origin}/app/`;
+        if (create) {
+          // create a room
+          try {
+            const room = { name: callToken };
+            const response = await axios.post(
+              `/api/v1/meeting/update-room`,
+              room
+            );
+            alert.textContent = response.data.msg;
+            alert.classList.add('alert-success');
+            alert.style.opacity = '1';
+            setTimeout(() => {
+              alert.style.opacity = '0';
+              setTimeout(() => {
+                alert.classList.remove('alert-success');
+                alert.textContent = '';
+              }, 1200);
+              // store token to app usage
+              localStorage.setItem('callToken', callToken);
+              document.location = `${document.location.origin}/app/`;
+            }, 2000);
+          } catch (error) {
+            axios.isAxiosError(error)
+              ? (alert.textContent = error.response.data.msg)
+              : (alert.textContent = error);
+            alert.classList.add('alert-danger');
+            alert.style.opacity = '1';
+            setTimeout(() => {
+              alert.style.opacity = '0';
+              setTimeout(() => {
+                alert.textContent = '';
+                alert.classList.remove('alert-danger');
+              }, 1200);
+            }, 2000);
+          }
+        } else {
+          // store token to app usage
+          localStorage.setItem('callToken', callToken);
+          document.location = `${document.location.origin}/app/#${callToken}`;
+        }
       }
     }
   };
@@ -106,16 +163,38 @@ window.onload = function init() {
     }, 2000);
   };
 
+  const formCreate = () => {
+    btnJoin.disabled = false;
+    btnCreate.disabled = true;
+    meetTitle.innerText = 'Create a new meeting';
+    tokenGen.disabled = false;
+    urlField.disabled = true;
+    create = true;
+  };
+  const formJoin = () => {
+    btnJoin.disabled = true;
+    btnCreate.disabled = false;
+    meetTitle.innerText = 'Join a meeting';
+    tokenGen.disabled = true;
+    urlField.disabled = false;
+    create = false;
+  };
+
   tokenGen.addEventListener('click', processGen);
   videoButton.addEventListener('click', videoCall);
   inputCode.addEventListener('input', inputToken);
-  const user = JSON.parse(localStorage.getItem('user'));
+  urlField.addEventListener('input', inputURL);
+  if (localStorage.getItem('user')) {
+    const user = JSON.parse(localStorage.getItem('user'));
+    if (user) {
+      avatar.innerText = user.name;
+    }
+  }
   logoutButton.addEventListener('click', logoutUser);
   codeCopy.addEventListener('click', codeToClip);
   urlCopy.addEventListener('click', urlToClip);
+  btnCreate.addEventListener('click', formCreate);
+  btnJoin.addEventListener('click', formJoin);
 
-  if (user) {
-    avatar.innerText = user.name;
-  }
   fetchUser();
 };

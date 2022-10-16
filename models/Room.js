@@ -6,7 +6,7 @@ const RoomSchema = new mongoose.Schema(
       type: String,
       trim: true,
       required: [true, 'Please provide room'],
-      minlength: 6,
+      minlength: 8,
       maxlength: 20,
       unique: true,
     },

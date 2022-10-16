@@ -188,7 +188,7 @@ ul {
 /* form */
 
 .form {
-  width: 70vw;
+  width: 90vw;
   max-width: var(--fixed-width);
   background: var(--white);
   border-radius: var(--borderRadius);
@@ -922,6 +922,38 @@ Home, register, login ... and Meeting Page
   margin-bottom: 0.75rem;
   text-align: center;
 }
+.meeting-buttons {
+  position: absolute;
+  margin-top: 1rem;
+  width: 90vw;
+  margin-left: 1rem;
+}
+.center-buttons {
+  display: grid;
+  place-items: center;
+  grid-template-columns: 1fr 1fr;
+}
+@media screen and (min-width: 768px) {
+  .meeting-buttons {
+    position: relative;
+    margin: 0 auto;
+    display: grid;
+    place-items: center;
+    grid-template-columns: 12rem 1fr;
+  }
+  .center-buttons {
+    display: grid;
+    place-items: center;
+    grid-template-columns: none;
+    grid-template-rows: repeat(2, 1fr);
+    row-gap: 2rem;
+  }
+  @media screen and (min-width: 992px) {
+    .meeting-buttons {
+      grid-template-columns: 1fr 12rem 1fr;
+    }
+  }
+}
 .underline {
   width: 5rem;
   height: 0.25rem;
@@ -989,6 +1021,16 @@ Home, register, login ... and Meeting Page
 }
 .no-copy {
   display: none;
+}
+
+.big-btn {
+  font-size: 1.563rem;
+  width: 8rem;
+}
+.big-btn:disabled,
+.btn-gen:disabled {
+  background-color: var(--grey-500);
+  opacity: 0.3;
 }
 
 /*

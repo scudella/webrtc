@@ -50,67 +50,82 @@ OF THIS SOFTWARE. -->
       <header class="hero-index"></header>
       <section class="meeting">
         <div class="meeting-center">
-          <div class="form-container">
-            <div class="alertCodeNotProvided">
-              <p class="alert alert-danger alert-show alert-top">
-                Please, provide a meeting code
-              </p>
+          <div class="meeting-buttons">
+            <div class="center-buttons">
+              <button
+                type="button"
+                id="btn-create"
+                class="btn big-btn"
+                disabled
+              >
+                Create
+              </button>
+              <button type="button" id="btn-join" class="btn big-btn">
+                Join
+              </button>
             </div>
-            <form id="form" class="form form-padding">
-              <h3>Start a new meeting</h3>
-              <!-- Token Input -->
-              <div class="form-row">
-                <label for="givenToken" class="form-label">
-                  or enter code:
-                </label>
-                <div class="copy">
-                  <input
-                    type="text"
-                    name="givenToken"
-                    id="givenToken"
-                    maxlength="20"
-                    placeholder="Enter Meeting Code"
-                    required
-                    class="form-input"
-                  />
-                  <i id="codeCopy" class="fa-regular fa-copy copy-item"></i>
-                  <i
-                    id="codeCheck"
-                    class="fa-solid fa-check copy-item no-copy"
-                  ></i>
+            <div class="form-container">
+              <div class="alertCodeNotProvided">
+                <p class="alert alert-show alert-top">
+                  Please, provide a meeting code
+                </p>
+              </div>
+              <form id="form" class="form form-padding">
+                <h3 id="meet-title">Create a new meeting</h3>
+                <!-- Token Input -->
+                <div class="form-row">
+                  <label for="givenToken" class="form-label">
+                    or enter code:
+                  </label>
+                  <div class="copy">
+                    <input
+                      type="text"
+                      name="givenToken"
+                      id="givenToken"
+                      maxlength="20"
+                      placeholder="Enter Meeting Code"
+                      required
+                      class="form-input"
+                    />
+                    <i id="codeCopy" class="fa-regular fa-copy copy-item"></i>
+                    <i
+                      id="codeCheck"
+                      class="fa-solid fa-check copy-item no-copy"
+                    ></i>
+                  </div>
                 </div>
-              </div>
-              <div class="form-row">
-                <label for="url" class="form-label"> URL: </label>
-                <div class="copy">
-                  <input
-                    type="url"
-                    name="url"
-                    id="url"
-                    maxlength="50"
-                    disabled
-                    class="form-input"
-                    placeholder="send this URL to the other parties"
-                  />
-                  <i id="urlCopy" class="fa-regular fa-copy copy-item"></i>
-                  <i
-                    id="urlCheck"
-                    class="fa-solid fa-check copy-item no-copy"
-                  ></i>
+                <div class="form-row">
+                  <label for="url" class="form-label"> URL: </label>
+                  <div class="copy">
+                    <input
+                      type="url"
+                      name="url"
+                      id="url"
+                      maxlength="48"
+                      disabled
+                      class="form-input"
+                      placeholder="send this URL to the other parties"
+                    />
+                    <i id="urlCopy" class="fa-regular fa-copy copy-item"></i>
+                    <i
+                      id="urlCheck"
+                      class="fa-solid fa-check copy-item no-copy"
+                    ></i>
+                  </div>
                 </div>
-              </div>
-              <div class="button-start">
-                <button id="tokenGen" class="btn btn-gen" type="button">
-                  Meeting Code
-                </button>
-                <button id="startvideo" type="button" class="btn-start">
-                  <img
-                    src="../images/play-svgrepo-com.svg"
-                    alt="Start Button"
-                  />
-                </button>
-              </div>
-            </form>
+                <div class="button-start">
+                  <button id="tokenGen" class="btn btn-gen" type="button">
+                    Meeting Code
+                  </button>
+                  <button id="startvideo" type="button" class="btn-start">
+                    <img
+                      src="../images/play-svgrepo-com.svg"
+                      alt="Start Button"
+                    />
+                  </button>
+                </div>
+              </form>
+            </div>
           </div>
         </div>
       </section>
