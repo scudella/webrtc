@@ -1,10 +1,14 @@
 const { logError, logComment } = require('../utils');
+const { authenticateWsUser } = require('./authentication');
 
 const webrtcClients = [];
 const webrtcRooms = {};
 
-const signalRequest = (req) => {
+const signalRequest = async (req) => {
   logComment(`new request ( ${req.origin} )`);
+
+  await authenticateWsUser(req);
+  const user = req.user;
 
   const connection = req.accept(null, req.origin);
   logComment(`new connection ( ${connection.remoteAddress} )`);
@@ -12,12 +16,19 @@ const signalRequest = (req) => {
   webrtcClients.push(connection);
   connection.id = webrtcClients.length - 1;
 
-  connection.on('message', (evt) => callSetup(connection, evt));
+  connection.on('message', (evt) => callSetup(connection, user, evt));
 
   connection.on('close', (evt) => connectionClosed(connection, evt));
 };
 
-const callSetup = (connection, message) => {
+const callSetup = (connection, user, message) => {
+  if (user) {
+    // user logged in
+    console.log('user logged in');
+  } else {
+    // call setup for no-login
+    console.log('user not logged in');
+  }
   if (message.type === 'utf8') {
     logComment(`got message ${message.utf8Data}`);
 

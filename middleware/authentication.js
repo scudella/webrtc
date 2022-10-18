@@ -43,7 +43,42 @@ const authorizePermissions = (...roles) => {
   };
 };
 
+const authenticateWsUser = async (req) => {
+  let refreshToken = undefined,
+    accessToken = undefined;
+  req.cookies.forEach((cookie) => {
+    const { name } = cookie;
+    if (name === 'refreshToken') {
+      refreshToken = cookie.value.substring(2, 339);
+    } else if (name === 'accessToken') {
+      accessToken = cookie.value.substring(2, 209);
+    }
+  });
+  try {
+    if (accessToken) {
+      const payload = isTokenValid(accessToken);
+      req.user = payload.user;
+      return;
+    } else if (refreshToken) {
+      const payload = isTokenValid(refreshToken);
+      const existingToken = await Token.findOne({
+        user: payload.user.userId,
+        refreshToken: payload.refreshToken,
+      });
+      if (!existingToken || !existingToken?.isValid) {
+        return;
+      } else {
+        req.user = payload.user;
+        return;
+      }
+    }
+  } catch (error) {
+    console.log(error);
+  }
+};
+
 module.exports = {
   authenticateUser,
   authorizePermissions,
+  authenticateWsUser,
 };
