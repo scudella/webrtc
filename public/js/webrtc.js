@@ -12,6 +12,11 @@ NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF OR IN CONNECTION WITH THE US
 OF THIS SOFTWARE.
 */
 
+//TODO
+// when room is full the anonymous is with local video
+// not-available, reset, hard-reset message
+// remove websocket from a privious connection
+
 import {
   setDataChannel,
   onDataChannel,
@@ -39,10 +44,19 @@ class PeerConnection {
     this.mediaStream = mediaStream;
   }
 }
+const localVideoElement = document.getElementById('local_video');
+const callState = document.querySelector('#call-state');
 
 window.onload = function init() {
-  // Load token provided in the home page
+  //  Load token provided in the home page
   callToken = localStorage.getItem('callToken');
+  if (!callToken) {
+    callToken = document.location.hash.slice(1, 21);
+    callToken = callToken.match(/[A-Za-z0-9-]+/);
+    if (!callToken) {
+      document.location = document.location.origin;
+    }
+  }
   serverOrigin = document.location.origin;
   webSocketOrigin = `wss://${document.location.host}`;
 
@@ -50,7 +64,8 @@ window.onload = function init() {
     iceservers: [{ urls: 'stun:stun.l.google.com:19302' }],
   };
   peerConnection = new RTCPeerConnection(configuration);
-  console.log(`The peerConnection is: ${peerConnection}`);
+  console.log(`The peerConnection is: `);
+  console.log(peerConnection);
   let receivers = peerConnection.getReceivers();
   // console.log(receivers);
 
@@ -203,6 +218,8 @@ window.onload = function init() {
             break;
           case 'disconnected':
             console.log('State disconnected. May be temporary.');
+            // TODO - with the new behaviour of owner staying in the call
+            // we either destroy the pc or time out before destroy
             break;
         }
       }
@@ -213,7 +230,6 @@ window.onload = function init() {
   const navToggle = document.querySelector('.nav-toggle');
   const links = document.querySelector('.menu');
   navToggle.addEventListener('click', function (evt) {
-    // console.log(evt.target);
     if (evt.target.parentNode === navToggle || evt.target === navToggle) {
       links.classList.toggle('show-menu');
       evt.stopPropagation();
@@ -327,8 +343,6 @@ window.onload = function init() {
   }
 
   function startCall(constraint) {
-    // start button pressed - start local media
-
     // disable toggle video and settings buttons
     document.getElementById('toggleVideo').disabled = true;
     // document.getElementById('settings').disabled = true;
@@ -379,7 +393,6 @@ window.onload = function init() {
           // console.log(`width: ${width}, height: ${height}`);
           // draw a rectangule on the whole canvas
           virtualCanvas.getContext('2d').fillRect(0, 0, width, height);
-
           // capture canvas stream
           let mediaSource = virtualCanvas.captureStream();
           // capture black rectangule from the canvas
@@ -422,39 +435,35 @@ window.onload = function init() {
         // create event listener to toggle audio
         mute.addEventListener('click', muteLocalVideo);
 
-        // create webSocket. The nodejs index.js application will handle it
-        // it currently handles http and ws
+        connection.push = new PeerConnection(
+          callToken,
+          peerConnection,
+          allMediaStreams
+        );
+
+        // set location.hash to the unique token for this call
+        console.log(callToken);
+        document.location.hash = callToken;
+
+        // create webSocket. The nodejs app.js application will handle it
         socket = new WebSocket(`${webSocketOrigin}`);
 
-        // if there is no hash code this is a caller leg
-        if (
-          document.location.hash === '' ||
-          document.location.hash === undefined
-        ) {
+        // the partySide variable registered on localStorage
+        // at meeting.js or start.js related pages
+        // to check if this is a caller or callee leg
+        // a caller may become a callee if we start two
+        // sections logged with the same credentials
+        // the server may set the last arriving as callee
+        // or may reject this leg.
+        // in the case where the url is input directly at the
+        // address bar, it may not have a partySide
+        partySide = localStorage.getItem('partySide');
+
+        if (partySide === 'caller') {
           // Caller leg
-          partySide = 'caller';
-
-          if (dataChannel === null) {
-            setDataChannel();
-          }
-
-          connection.push = new PeerConnection(
-            callToken,
-            peerConnection,
-            allMediaStreams
-          );
-
-          if (callToken === '' || callToken === undefined) {
-            alert('meeting code not provided');
-            document.location = `${serverOrigin}`;
-          }
-          // set location.hash to the unique token for this call
-          console.log(callToken);
-          document.location.hash = callToken;
-
           socket.onopen = function () {
             socket.onmessage = callerSignalling;
-
+            // send join message to the bridge
             socket.send(
               JSON.stringify({
                 token: callToken,
@@ -462,39 +471,19 @@ window.onload = function init() {
               })
             );
           };
-
-          document.title = 'Caller Leg';
         } else {
           // Callee Leg
           partySide = 'callee';
           // Set listeners for data channel
           peerConnection.ondatachannel = onDataChannel;
 
-          callToken = document.location.hash;
-          callToken = callToken.slice(1);
-
-          connection.push = new PeerConnection(
-            callToken,
-            peerConnection,
-            allMediaStreams
-          );
-
           socket.onopen = function () {
             socket.onmessage = calleeSignalling;
-
-            // This message is for the server link me to the token
+            // send join message to the bridge
             socket.send(
               JSON.stringify({
                 token: callToken,
                 type: 'join',
-              })
-            );
-
-            // let the peer know this leg is ready to start the call
-            socket.send(
-              JSON.stringify({
-                token: callToken,
-                type: 'callee_arrived',
               })
             );
           };
@@ -578,8 +567,21 @@ function handleGetUserMediaError(e) {
 
 // handle signals as a caller
 function callerSignalling(event) {
-  var signal = JSON.parse(event.data);
-  if (signal.type === 'callee_arrived') {
+  const signal = JSON.parse(event.data);
+  if (signal.type === 'caller_arrived') {
+    // Server asks this instance to be Callee Leg
+    // probably there is already another instance
+    // with the same credentials in the bridge
+    socket.onmessage = calleeSignalling;
+    partySide = 'callee';
+    // Set listeners for data channel
+    peerConnection.ondatachannel = onDataChannel;
+    document.title = 'Callee Leg';
+  } else if (signal.type === 'callee_arrived') {
+    document.title = 'Caller Leg';
+    if (dataChannel === null) {
+      setDataChannel();
+    }
     peerConnection
       .createOffer()
       .then(function (offer) {
@@ -604,8 +606,7 @@ function callerSignalling(event) {
     peerConnection.addIceCandidate(new RTCIceCandidate(signal.candidate));
   } else if (signal.type === 'description') {
     console.log(
-      'New description message received. Set remote description. Type is ' +
-        signal.sdp.type
+      `New description message received. Set remote description. Type is ${signal.sdp.type}`
     );
     if (signal.sdp.type === 'answer') {
       peerConnection
@@ -643,23 +644,24 @@ function callerSignalling(event) {
     }
   } else if (signal.type === 'hang-up') {
     console.log('Received hang up notification from other peer');
-    closeVideoCall();
+    hangupReceivedByCaller();
+  } else if (signal.type === 'full_bridge') {
+    // TODO
   } else {
-    console.log('Non-handled ' + signal.type + ' received');
+    console.log(`Non-handled ${signal.type} received`);
   }
 }
 
 // handle signals as a callee
 
 function calleeSignalling(event) {
-  var signal = JSON.parse(event.data);
+  const signal = JSON.parse(event.data);
   if (signal.type === 'ice-candidate') {
     console.log('New Ice Candidate message received.');
     peerConnection.addIceCandidate(new RTCIceCandidate(signal.candidate));
   } else if (signal.type === 'description') {
     console.log(
-      'New description message received. Set remote description. Type is ' +
-        signal.sdp.type
+      `New description message received. Set remote description. Type is ${signal.sdp.type}`
     );
     if (signal.sdp.type === 'offer') {
       peerConnection
@@ -698,8 +700,10 @@ function calleeSignalling(event) {
   } else if (signal.type === 'hang-up') {
     console.log('Received hang up notification from other peer');
     closeVideoCall();
+  } else if (signal.type === 'full_bridge') {
+    // TODO
   } else {
-    console.log('Non-handled ' + signal.type + ' received');
+    console.log(`Non-handled ${signal.type} received`);
   }
 }
 
@@ -795,22 +799,43 @@ function checkRemoveTrack() {
   }
 }
 
-function closeVideoCall() {
+const hangupReceivedByCaller = () => {
+  const remoteVideoElement = document.getElementById('remote_video');
+  const remoteVideoContainer = document.querySelector('.remoteVideoContainer');
+  const videoContainer = document.querySelector('#videoContainer');
+  if (peerConnection) {
+    peerConnection.close();
+    peerConnection = null;
+  }
+  if (remoteVideoElement && remoteVideoElement.srcObject) {
+    remoteVideoElement.pause();
+    remoteVideoElement.srcObject.getTracks().forEach((track) => track.stop());
+    remoteVideoElement.removeAttribute('src');
+    remoteVideoElement.load();
+    // remove the video element
+    for (const child of remoteVideoContainer.children) {
+      child.remove();
+    }
+    // remove the div element
+    for (const child of videoContainer.children) {
+      if (child.classList.contains('remoteVideoContainer')) {
+        child.remove();
+      }
+    }
+  }
+  document.getElementById('hangup').disabled = true;
+  document.getElementById('sharescreen').disabled = true;
+  document.querySelector('#mute').disabled = true;
+  document.querySelector('#shareVideo').disabled = true;
+  callState.style.backgroundColor = 'honeydew';
+};
+
+const closeVideoCall = () => {
   console.log('Closing Video Call');
   const remoteVideo = document.getElementById('remote_video');
   const localVideo = document.getElementById('local_video');
-  const callState = document.querySelector('#call-state');
 
   if (peerConnection) {
-    peerConnection.ontrack = null;
-    peerConnection.onremovetrack = null;
-    peerConnection.onremovestream = null;
-    peerConnection.onicecandidate = null;
-    peerConnection.oniceconnectionstatechange = null;
-    peerConnection.onsignalingstatechange = null;
-    peerConnection.onicegatheringstatechange = null;
-    peerConnection.onnegotiationneeded = null;
-
     if (remoteVideo && remoteVideo.srcObject) {
       remoteVideo.srcObject.getTracks().forEach((track) => track.stop());
       remoteVideo.srcObject = null;
@@ -836,7 +861,7 @@ function closeVideoCall() {
   document.querySelector('#mute').disabled = true;
   document.querySelector('#shareVideo').disabled = true;
   callState.style.backgroundColor = 'honeydew';
-}
+};
 
 function hangUpCall() {
   socket.send(

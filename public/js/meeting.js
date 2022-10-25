@@ -119,6 +119,7 @@ window.onload = function init() {
               }, 1200);
               // store token to app usage
               localStorage.setItem('callToken', callToken);
+              localStorage.setItem('partySide', 'caller');
               document.location = `${document.location.origin}/app/`;
             }, 2000);
           } catch (error) {
@@ -138,6 +139,7 @@ window.onload = function init() {
         } else {
           // store token to app usage
           localStorage.setItem('callToken', callToken);
+          localStorage.setItem('partySide', 'callee');
           document.location = `${document.location.origin}/app/#${callToken}`;
         }
       }
@@ -148,6 +150,7 @@ window.onload = function init() {
     try {
       await axios.delete('/api/v1/auth/logout');
       localStorage.removeItem('user');
+      localStorage.removeItem('partySide');
       document.location = `${document.location.origin}`;
     } catch (error) {
       console.log(error);

@@ -17,7 +17,7 @@ const updateRoom = async (req, res) => {
     if (existingUser) {
       // user has a room, update it
       const room = await Room.findOneAndUpdate(
-        { userId },
+        { user: userId },
         {
           name,
           ip,
