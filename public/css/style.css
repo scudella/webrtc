@@ -455,7 +455,7 @@ Sidebar
 #shareVideo:disabled .inner-text,
 #canvasChat:disabled .inner-text,
 #sharescreen:disabled .inner-text,
-#settings:disabled .inner-text {
+#replace-screen:disabled .inner-text {
   color: var(--grey-300);
 }
 
@@ -655,11 +655,11 @@ Footer SVG Buttons
   border-radius: 50%;
   border: transparent;
   padding: 0;
-  height: 3.4rem;
-  width: 3.4rem;
-  font-size: 3.4rem;
+  height: 1.4rem;
+  width: 1.4rem;
+  font-size: 1.4rem;
   align-self: center;
-  line-height: 3rem;
+  line-height: 1rem;
 }
 .new-state {
   background-color: aqua;
@@ -1121,4 +1121,39 @@ Forgot Page
 */
 .form-title {
   text-align: center;
+}
+
+/*
+=============== 
+Modal Page
+===============
+*/
+.modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: rgba(0, 0, 0, 0.5);
+  display: grid;
+  place-items: center;
+  transition: var(--transition);
+  visibility: hidden;
+  z-index: -1;
+}
+/* OPEN/CLOSE MODAL */
+.show-modal {
+  visibility: visible;
+  z-index: 20;
+}
+.modal-container {
+  background: var(--white);
+  border-radius: var(--borderRadius);
+  width: 90vw;
+  height: 30vh;
+  max-width: var(--fixed-width);
+  text-align: center;
+  display: grid;
+  place-items: center;
+  position: relative;
 }

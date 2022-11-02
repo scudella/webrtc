@@ -118,8 +118,6 @@ const callSetup = async (leg, message) => {
                 } else {
                   // other party is owner
 
-                  // another owner connection - this will be callee
-                  bridgeAddLeg(token, connection.id, 'callee');
                   // send message to the other party:  callee arrived
                   // get other party connection id
 
@@ -128,7 +126,7 @@ const callSetup = async (leg, message) => {
                       token,
                       type: 'callee_arrived',
                     }),
-                    logError
+                    () => notConnected(owner[0], token, connection.id)
                   );
                   logComment(
                     `callee_arrived sent to first owner ${owner[0]} at room ${token}`
@@ -145,6 +143,8 @@ const callSetup = async (leg, message) => {
                   logComment(
                     `caller_arrived sent to second owner ${connection.id} at room ${token}`
                   );
+                  // another owner connection - this will be callee
+                  bridgeAddLeg(token, connection.id, 'callee');
                 }
               }
             }
@@ -169,12 +169,12 @@ const callSetup = async (leg, message) => {
                 webrtcClients[connection.id].connection.send(
                   JSON.stringify({
                     token,
-                    type: 'full_bridge',
+                    type: 'full-bridge',
                   }),
                   logError
                 );
                 logComment(
-                  `full_bridge sent to ${
+                  `full-bridge sent to ${
                     user ? user.userId : 'anonymous'
                   } at room ${token}`
                 );
@@ -191,7 +191,6 @@ const callSetup = async (leg, message) => {
                   bridgeAddLeg(token, connection.id, 'callee');
                   // send to the owner the message callee arrived
                   const owner = bridge.find((mate) => mate[1] === 'owner');
-                  console.log(owner);
                   if (owner) {
                     webrtcClients[owner[0]].connection.send(
                       JSON.stringify({
@@ -236,7 +235,6 @@ const callSetup = async (leg, message) => {
                 ) {
                   // Let's intercept hang-up to do some clean-up.
                   if (type === 'hang-up') {
-                    console.log(webrtcRooms);
                     let partyIsOwner = false;
                     const bridge = Object.entries(webrtcRooms[token]);
                     bridge.forEach((id) => {
@@ -271,7 +269,6 @@ const callSetup = async (leg, message) => {
                       try {
                         delete webrtcRooms[token];
                         logComment(`room ${token} deleted`);
-                        logComment(webrtcRooms);
                         return;
                       } catch (error) {
                         logError(error);
@@ -328,7 +325,6 @@ const callSetup = async (leg, message) => {
                         try {
                           delete webrtcRooms[token];
                           logComment(`room ${token} deleted`);
-                          logComment(webrtcRooms);
                         } catch (error) {
                           logError(error);
                           logError(
@@ -359,10 +355,18 @@ const callSetup = async (leg, message) => {
                     // then broadcast the message to everybody else
                     Object.keys(webrtcRooms[token]).forEach((id) => {
                       if (id != connection.id) {
-                        webrtcClients[id].connection.send(
-                          message.utf8Data,
-                          logError
-                        );
+                        try {
+                          webrtcClients[id].connection.send(
+                            message.utf8Data,
+                            logError
+                          );
+                        } catch (error) {
+                          if (!webrtcClients[id].connection.connected) {
+                            logError('sending some message to everybody else');
+                            delete webrtcRooms[token][id];
+                            delete webrtcClients[id];
+                          }
+                        }
                       }
                     });
                   }
@@ -443,7 +447,6 @@ const connectionClosed = (connection, evt) => {
           try {
             delete webrtcRooms[token];
             logComment$`room ${token} deleted`;
-            logComment(webrtcRooms);
             return;
           } catch (error) {
             logError(error);
@@ -489,7 +492,6 @@ const connectionClosed = (connection, evt) => {
             try {
               delete webrtcRooms[token];
               logComment(`room ${token} deleted`);
-              logComment(webrtcRooms);
             } catch (error) {
               logError(error);
               logError(`error deleting bridge ${token} after dropping all`);
@@ -535,7 +537,6 @@ const bridgeReset = (token) => {
           logError
         );
       }
-      webrtcClients[id].connection.close();
       try {
         delete webrtcClients[id];
       } catch (error) {
@@ -548,7 +549,6 @@ const bridgeReset = (token) => {
   try {
     delete webrtcRooms[token];
     logComment(`bridge reset complete for room ${token}`);
-    logComment(webrtcRooms);
   } catch (error) {
     logError(`error deleting bridge ${token}`);
   }
@@ -567,14 +567,29 @@ const bridgeCreate = (token) => {
 
 const bridgeAddLeg = (token, id, legRole) => {
   try {
-    webrtcRooms[token][id] = legRole;
-    webrtcClients[id].rooms.push(token);
+    if (webrtcRooms[token][id]) {
+      // id may be in the room as another role
+      webrtcRooms[token][id] = legRole;
+    } else {
+      webrtcRooms[token][id] = legRole;
+      webrtcClients[id].rooms.push(token);
+    }
     logComment(`Add ${id} to bridge ${token} as ${legRole}`);
   } catch (error) {
     logError(error);
     logError(`error adding ${id} ${legRole} to bridge ${token}`);
     connection.close('1000');
     return;
+  }
+};
+
+const notConnected = (firstId, token, secondId) => {
+  // if owner had a browser reset it won't be connected
+  if (!webrtcClients[firstId].connection.connected) {
+    // owner is gone
+    bridgeAddLeg(token, secondId, 'owner');
+    delete webrtcRooms[token][firstId];
+    delete webrtcClients[firstId];
   }
 };
 

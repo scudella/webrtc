@@ -11,6 +11,8 @@ WHATSOEVER RESULTING FROM LOSS OF USE, DATA OR PROFITS, WHETHER IN AN ACTION OF 
 NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF OR IN CONNECTION WITH THE USE OR PERFORMANCE 
 OF THIS SOFTWARE.
 */
+import { toast } from './utils/toast.js';
+
 window.onload = function init() {
   const inputEmail = document.getElementById('email');
   const inputPassword = document.getElementById('password');
@@ -54,23 +56,10 @@ window.onload = function init() {
     } catch (error) {
       sectionPage.classList.add('no-page');
       sectionMeeting.classList.remove('no-meeting');
-      alert.classList.add('alert-danger');
-      alert.style.opacity = '1';
-      axios.isAxiosError(error)
-        ? (alert.textContent = error.response.data.msg)
-        : (alert.textContent = error);
+      toast({ alertClass: 'alert-danger', error });
       setTimeout(() => {
-        alert.style.opacity = '0';
-        setTimeout(() => {
-          alert.textContent = '';
-          alert.classList.remove('alert-danger');
-          form.classList.remove('no-form');
-          form.style.opacity = '0';
-          setTimeout(() => {
-            form.style.opacity = '1';
-          }, 300);
-        }, 1200);
-      }, 2000);
+        form.classList.remove('no-form');
+      }, 3200);
     }
   };
 

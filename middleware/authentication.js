@@ -1,7 +1,9 @@
+require('dotenv').config();
 const CustomError = require('../errors');
 const { isTokenValid } = require('../utils');
 const Token = require('../models/Token');
 const { attachCookiesToResponse } = require('../utils');
+const cookieParser = require('cookie-parser');
 
 const authenticateUser = async (req, res, next) => {
   const { refreshToken, accessToken } = req.signedCookies;
@@ -44,14 +46,19 @@ const authorizePermissions = (...roles) => {
 };
 
 const authenticateWsUser = async (req) => {
-  let refreshToken = undefined,
-    accessToken = undefined;
+  let refreshToken, accessToken;
   req.cookies.forEach((cookie) => {
     const { name } = cookie;
     if (name === 'refreshToken') {
-      refreshToken = cookie.value.substring(2, 339);
+      refreshToken = cookieParser.signedCookie(
+        cookie.value,
+        process.env.JWT_SECRET
+      );
     } else if (name === 'accessToken') {
-      accessToken = cookie.value.substring(2, 209);
+      accessToken = cookieParser.signedCookie(
+        cookie.value,
+        process.env.JWT_SECRET
+      );
     }
   });
   try {

@@ -12,223 +12,54 @@ NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF OR IN CONNECTION WITH THE US
 OF THIS SOFTWARE.
 */
 
-//TODO
-// when room is full the anonymous is with local video
-// not-available, reset, hard-reset message
-// remove websocket from a privious connection
-
-import {
-  setDataChannel,
-  onDataChannel,
-  dataChannel,
-  toggleCanvasChat,
-} from './chat.js';
+import { setDataChannel, onDataChannel, toggleCanvasChat } from './chat.js';
+import { toast } from './utils/toast.js';
 
 let callToken = '';
 let socket;
-let peerConnection;
 let virtualCanvas = null;
 let allMediaStreams = [];
 let connection = [];
-let screenReplaceVideo = localStorage.getItem('replace') === 'sameVideo';
 let noVideoCall = false;
 let sharingScreen = false;
 let partySide = '';
 let serverOrigin = '';
 let webSocketOrigin = '';
 
-class PeerConnection {
-  constructor(callToken, peerConnection, mediaStream) {
-    this.token = callToken;
-    this.peerConnection = peerConnection;
-    this.mediaStream = mediaStream;
-  }
-}
-const localVideoElement = document.getElementById('local_video');
 const callState = document.querySelector('#call-state');
+const toggleButton = document.getElementById('toggleVideo');
+const navToggle = document.querySelector('.nav-toggle');
+const links = document.querySelector('.menu');
+const replaceScreen = document.getElementById('replace-screen');
+const video = document.getElementById('local_video');
+const canvasOverlay = document.querySelector('#canvasOverlay');
+const hangup = document.getElementById('hangup');
+const shareScreen = document.getElementById('sharescreen');
+const mute = document.querySelector('#mute');
+const shareVideo = document.querySelector('#shareVideo');
+const canvasChat = document.getElementById('canvasChat');
+const avatar = document.querySelector('.user');
 
 window.onload = function init() {
-  //  Load token provided in the home page
-  callToken = localStorage.getItem('callToken');
-  if (!callToken) {
-    callToken = document.location.hash.slice(1, 21);
-    callToken = callToken.match(/[A-Za-z0-9-]+/);
-    if (!callToken) {
-      document.location = document.location.origin;
-    }
-  }
   serverOrigin = document.location.origin;
   webSocketOrigin = `wss://${document.location.host}`;
+  //  Get token provided in the home page or direct
+  // in the address field
+  callToken = document.location.hash.slice(1, 21);
+  if (callToken) {
+    callToken = callToken.match(/[A-Za-z0-9-]+/)[0];
+  }
+  if (!callToken) {
+    document.location = `${serverOrigin}`;
+  }
+  localStorage.setItem('callToken', callToken);
 
-  let configuration = {
-    iceservers: [{ urls: 'stun:stun.l.google.com:19302' }],
-  };
-  peerConnection = new RTCPeerConnection(configuration);
-  console.log(`The peerConnection is: `);
-  console.log(peerConnection);
-  let receivers = peerConnection.getReceivers();
-  // console.log(receivers);
+  if (localStorage.getItem('user')) {
+    const user = JSON.parse(localStorage.getItem('user'));
 
-  peerConnection.onicecandidate = function (event) {
-    if (event.candidate) {
-      socket.send(
-        JSON.stringify({
-          token: callToken,
-          type: 'ice-candidate',
-          candidate: event.candidate,
-        })
-      );
-    }
-  };
+    avatar.innerText = user.name;
+  }
 
-  // let the "negotiationneeded" event trigger offer generation
-  peerConnection.onnegotiationneeded = async () => {
-    console.log(
-      'Negotiation Needed. IceConnectionState is: ' +
-        peerConnection.iceConnectionState
-    );
-    try {
-      if (peerConnection.iceConnectionState !== 'new') {
-        await peerConnection.setLocalDescription();
-        // send the offer to the other peer
-        socket.send(
-          JSON.stringify({
-            token: callToken,
-            type: 'description',
-            sdp: peerConnection.localDescription,
-          })
-        );
-      }
-    } catch (err) {
-      log_error(err);
-    }
-  };
-
-  peerConnection.ontrack = function (event) {
-    console.log('ontrack called. The event is:');
-    console.log(event);
-    const track = event.track;
-    const type = track.kind;
-    // console.log(type);
-
-    let remoteVideoCreated = allMediaStreams.find(
-      (stream) => stream.videoId === 'remote_video'
-    );
-    let videoShare = allMediaStreams.find(
-      (stream) => stream.videoId === 'video_share'
-    );
-    if (!remoteVideoCreated) {
-      let remote_video = 'remote_video';
-
-      // Create remote video from peer
-      remoteVideoCreated = createVideo(remote_video, event);
-
-      // Save mediaStream from remote
-      allMediaStreams.push({
-        mediaStream: remoteVideoCreated,
-        videoId: 'remote_video',
-      });
-
-      // Enable hangup button
-      let hangup = document.getElementById('hangup');
-      hangup.disabled = false;
-      hangup.addEventListener('click', hangUpCall);
-
-      // Enable mute button
-      let mute = document.querySelector('#mute');
-      mute.disabled = false;
-
-      // Allow video to be shared with remote
-      let shareVideo = document.querySelector('#shareVideo');
-      shareVideo.disabled = false;
-      shareVideo.addEventListener('click', createVideoElement);
-
-      // Allow screen to be shared with remote
-      let shareScreen = document.getElementById('sharescreen');
-      shareScreen.disabled = false;
-      shareScreen.addEventListener('click', sharedScreen);
-
-      // Enable canvas message to be selected
-      let canvasChat = document.getElementById('canvasChat');
-      canvasChat.disabled = false;
-      canvasChat.addEventListener('click', toggleCanvasChat);
-
-      // Remote video has additional streams to add
-    } else if (remoteVideoCreated.mediaStream.id === event.streams[0].id) {
-      document.querySelector('#remote_video').srcObject = event.streams[0];
-      receivers = peerConnection.getReceivers();
-      // console.log(receivers);
-
-      // If on track is not from remote video camera it should be from a video
-      // or screen sharing
-    } else if (!videoShare) {
-      let video_share = 'video_share';
-      videoShare = createVideo(video_share, event);
-      allMediaStreams.push({ mediaStream: videoShare, videoId: 'video_share' });
-      console.log('Shared Video Arrived');
-
-      document.querySelector('#shareVideo').disabled = true;
-
-      if (!screenReplaceVideo) {
-        document.getElementById('sharescreen').disabled = true;
-      }
-      // Check for tracks removed
-      setTimeout(checkRemoveTrack, 1000);
-
-      // video or screen sharing has additional tracks to add
-    } else if (videoShare.mediaStream.id === event.streams[0].id) {
-      document.querySelector('#video_share').srcObject = event.streams[0];
-
-      // track not related with remote camera or video/screen sharing
-    } else {
-      console.log('ontrack received, but not handled:');
-      console.log(event.streams[0].id);
-    }
-  };
-
-  peerConnection.addEventListener(
-    'iceconnectionstatechange',
-    () => {
-      let stateElem = document.querySelector('#call-state');
-      stateElem.className = `${peerConnection.iceConnectionState}-state`;
-
-      {
-        switch (peerConnection.iceConnectionState) {
-          case 'new':
-            console.log(
-              'The ICE agent is gathering addresses or is waiting to be given remote candidates'
-            );
-            break;
-          case 'checking':
-            console.log('The ICE agent is checking candidates.');
-            break;
-          case 'connected':
-            console.log('The ice connection has been established.');
-            break;
-          case 'completed':
-            console.log('ICE has found a connection for all components.');
-            break;
-          case 'closed':
-            console.log('Call closed');
-            closeVideoCall();
-            break;
-          case 'failed':
-            console.log('Call failed');
-            closeVideoCall();
-            break;
-          case 'disconnected':
-            console.log('State disconnected. May be temporary.');
-            // TODO - with the new behaviour of owner staying in the call
-            // we either destroy the pc or time out before destroy
-            break;
-        }
-      }
-    },
-    false
-  );
-
-  const navToggle = document.querySelector('.nav-toggle');
-  const links = document.querySelector('.menu');
   navToggle.addEventListener('click', function (evt) {
     if (evt.target.parentNode === navToggle || evt.target === navToggle) {
       links.classList.toggle('show-menu');
@@ -236,10 +67,7 @@ window.onload = function init() {
     }
   });
 
-  let settings = document.getElementById('settings');
-  settings.addEventListener('click', () => {
-    document.location = `${serverOrigin}/settings.html`;
-  });
+  toggleButton.addEventListener('click', toggleVideo);
 
   const constraint = {
     audio: true,
@@ -255,98 +83,9 @@ window.onload = function init() {
     },
   };
 
-  const toggleButton = document.getElementById('toggleVideo');
-  toggleButton.addEventListener('click', toggleVideo);
-
   startCall(constraint);
 
-  function toggleVideo() {
-    // Is the button in the no video mode?
-    if (!noVideoCall) {
-      // Call already set to no camera mode
-      // enable camera again
-      noVideoCall = true;
-      // toggle the button background red
-      toggleButton.classList.toggle('mute');
-      let originalStream = null;
-      originalStream = allMediaStreams.find(
-        (stream) => stream.videoId === 'local_video'
-      );
-      // The local media already started?
-      // otherwise, do not do anything else
-      if (originalStream) {
-        // Local media already started
-        if (!virtualCanvas) {
-          // Create the virtual canvas
-          let video = document.getElementById('local_video');
-          let width = video.videoWidth;
-          let height = video.videoHeight;
-          // Create the canvas with the same dimensions of the video to avoid
-          // renegotiation
-          virtualCanvas = Object.assign(document.createElement('canvas'), {
-            width,
-            height,
-          });
-          // draw a rectangule on the canvas
-          virtualCanvas.getContext('2d').fillRect(0, 0, width, height);
-          // capture canvas stream
-          let mediaSource = virtualCanvas.captureStream(10);
-          // store the media information with the sender of local_video
-          allMediaStreams.push({
-            mediaStream: mediaSource,
-            senders: originalStream.senders,
-            videoId: 'canvas',
-          });
-        }
-        const canvasOverlay = document.querySelector('#canvasOverlay');
-        canvasOverlay.classList.add('frontVideo');
-        // if sharing screen is in place do not send canvas
-        if (!sharingScreen) {
-          let canvasStream = allMediaStreams.find(
-            (sender) => sender.videoId === 'canvas'
-          );
-          originalStream.senders
-            .find((sender) => sender.track.kind === 'video')
-            .replaceTrack(canvasStream.mediaStream.getVideoTracks()[0]);
-          // bring the canvas overlay in front of the local video
-        }
-        // set timeout to redraw canvas, otherwise the remote side
-        // does not start the video
-        setTimeout(drawCanvas, 500);
-      }
-      // setting call to no video mode
-    } else {
-      noVideoCall = false;
-      // toggle the button to white
-      toggleButton.classList.toggle('mute');
-      // move the canvas overlay to the back
-      let canvasOverlay = document.querySelector('#canvasOverlay');
-      canvasOverlay.classList.remove('frontVideo');
-      let originalStream = null;
-      // Has the local media already started?
-      originalStream = allMediaStreams.find(
-        (sender) => sender.videoId === 'local_video'
-      );
-
-      if (originalStream) {
-        // local media already started
-        // if sharing screen is in place do not do anything else
-        if (!sharingScreen) {
-          let originalTrack = originalStream.mediaStream.getTracks()[1];
-
-          originalStream.senders
-            .find((sender) => sender.track.kind === 'video')
-            .replaceTrack(originalTrack);
-        }
-      }
-    }
-  }
-
   function startCall(constraint) {
-    // disable toggle video and settings buttons
-    document.getElementById('toggleVideo').disabled = true;
-    // document.getElementById('settings').disabled = true;
-
     // getusermedia
     navigator.mediaDevices
       .getUserMedia(constraint)
@@ -354,92 +93,22 @@ window.onload = function init() {
         // start with the audio stream muted
         stream.getAudioTracks()[0].enabled = false;
         // add full screen handling
-        let video = document.getElementById('local_video');
         video.addEventListener('dblclick', videoDblClick);
         video.style.backgroundColor = 'transparent';
         // start stream in the local video
         video.srcObject = stream;
         video.play();
 
-        // save senders for easy replacing later
-        let senders = [];
-        stream
-          .getTracks()
-          .forEach((track) =>
-            senders.push(peerConnection.addTrack(track, stream))
-          );
-
         // save local media in the peer connection object
         allMediaStreams.push({
           mediaStream: stream,
-          senders: senders,
           videoId: 'local_video',
         });
 
-        // if no video mode selected send canvas stream instead
-        // wait video to start to touch it
-        if (noVideoCall) {
-          video.oncanplay = canvasCreateStream;
-        }
-        function canvasCreateStream() {
-          // create canvas with the same video dimensions to avoid
-          // renegotiation
-          let width = video.videoWidth;
-          let height = video.videoHeight;
-          virtualCanvas = Object.assign(document.createElement('canvas'), {
-            width,
-            height,
-          });
-          // console.log(`width: ${width}, height: ${height}`);
-          // draw a rectangule on the whole canvas
-          virtualCanvas.getContext('2d').fillRect(0, 0, width, height);
-          // capture canvas stream
-          let mediaSource = virtualCanvas.captureStream();
-          // capture black rectangule from the canvas
-          let blackVideoTrack = mediaSource.getVideoTracks()[0];
-          // console.log('black video track:');
-          // console.log(blackVideoTrack);
-          let noVideoStream = allMediaStreams.find(
-            (stream) => stream.videoId === 'local_video'
-          );
-          // store canvas information on peer connection object
-          // senders from the local_video
-          allMediaStreams.push({
-            mediaStream: mediaSource,
-            senders: noVideoStream.senders,
-            videoId: 'canvas',
-          });
-          // console.log('noVideoStream stream is: ');
-          // console.log(noVideoStream);
-          // replace local media video stream with canvas stream
-          noVideoStream.senders
-            .find((sender) => sender.track.kind === 'video')
-            .replaceTrack(blackVideoTrack);
-
-          // Let the canvas overlay the local_video
-          // with the same virtual canvas sent to the peer.
-          let canvasOverlay = document.querySelector('#canvasOverlay');
-          canvasOverlay.classList.add('frontVideo');
-
-          // toggle video is enabled again
-          document.getElementById('toggleVideo').disabled = false;
-          // set timeout to redraw canvas every 100 ms
-          // or remote video may not start
-          setTimeout(drawCanvas, 100);
-          virtualCanvas.getContext('2d').fillRect(0, 0, width, height);
-        }
-
         // toggle video button is enabled
-        document.getElementById('toggleVideo').disabled = false;
-        let mute = document.querySelector('#mute');
+        toggleButton.disabled = false;
         // create event listener to toggle audio
         mute.addEventListener('click', muteLocalVideo);
-
-        connection.push = new PeerConnection(
-          callToken,
-          peerConnection,
-          allMediaStreams
-        );
 
         // set location.hash to the unique token for this call
         console.log(callToken);
@@ -458,6 +127,7 @@ window.onload = function init() {
         // in the case where the url is input directly at the
         // address bar, it may not have a partySide
         partySide = localStorage.getItem('partySide');
+        localStorage.setItem('partySide', '');
 
         if (partySide === 'caller') {
           // Caller leg
@@ -470,12 +140,14 @@ window.onload = function init() {
                 type: 'join',
               })
             );
+            socket.onclose = (event) => {
+              // TODO - hangupReceivedByCaller ?
+              console.log(`received websocket on close event`);
+            };
           };
         } else {
           // Callee Leg
           partySide = 'callee';
-          // Set listeners for data channel
-          peerConnection.ondatachannel = onDataChannel;
 
           socket.onopen = function () {
             socket.onmessage = calleeSignalling;
@@ -486,6 +158,10 @@ window.onload = function init() {
                 type: 'join',
               })
             );
+            socket.onclose = (event) => {
+              // TODO ??? check pc status ?
+              console.log(`received websocket on close event`);
+            };
           };
 
           document.title = 'Callee Leg';
@@ -497,21 +173,101 @@ window.onload = function init() {
 
 /* functions used above are defined below */
 
-function drawCanvas() {
-  let ctx = virtualCanvas.getContext('2d');
-  ctx.save();
-  ctx.fillStyle = 'rgb(21,14,86)';
-  let video = document.querySelector('#local_video');
+const toggleVideo = () => {
+  // Is the button in the no camera mode?
+  if (!noVideoCall) {
+    // set call to no camera mode
+    noVideoCall = true;
+    // toggle the button background red
+    toggleButton.classList.toggle('mute');
+    // Get the camera stream
+    if (!virtualCanvas) {
+      canvasCreateStream();
+    }
+    canvasOverlay.classList.add('frontVideo');
+    // if sharing screen is in place do not send canvas
+    if (!sharingScreen) {
+      const canvasStream = allMediaStreams.find(
+        (stream) => stream.videoId === 'canvas'
+      );
+
+      connection.length &&
+        connection[0].peerConnection
+          .getSenders()
+          .find((sender) => sender.track.kind === 'video')
+          .replaceTrack(canvasStream.mediaStream.getVideoTracks()[0]);
+      // bring the canvas overlay in front of the local video
+    }
+    // set timeout to redraw canvas, otherwise the remote side
+    // does not start the video
+    setTimeout(drawCanvas, 500);
+  } else {
+    // setting call to video mode
+    noVideoCall = false;
+    // toggle the button to white
+    toggleButton.classList.toggle('mute');
+    // move the canvas overlay to the back
+    canvasOverlay.classList.remove('frontVideo');
+
+    // if sharing screen is in place do not do anything else
+    if (!sharingScreen) {
+      const originalStream = allMediaStreams.find(
+        (stream) => stream.videoId === 'local_video'
+      );
+      // Get the camara stream
+      const originalTrack = originalStream.mediaStream.getTracks()[1];
+
+      // replace canvas with camera stream
+      connection.length &&
+        connection[0].peerConnection
+          .getSenders()
+          .find((sender) => sender.track.kind === 'video')
+          .replaceTrack(originalTrack);
+    }
+  }
+};
+
+const canvasCreateStream = () => {
+  // create canvas with the same video dimensions to avoid
+  // renegotiation
   let width = video.videoWidth;
   let height = video.videoHeight;
+  virtualCanvas = Object.assign(document.createElement('canvas'), {
+    width,
+    height,
+  });
+  // console.log(`width: ${width}, height: ${height}`);
+  // draw a rectangule on the whole canvas
+  virtualCanvas.getContext('2d').fillRect(0, 0, width, height);
+  // capture canvas stream
+  let mediaSource = virtualCanvas.captureStream(10);
+  // store canvas information on peer connection object
+  // senders from the local_video
+  allMediaStreams.push({
+    mediaStream: mediaSource,
+    videoId: 'canvas',
+  });
+};
+
+const drawCanvas = () => {
+  const ctx = virtualCanvas.getContext('2d');
+  ctx.save();
+  ctx.fillStyle = 'rgb(21,14,86)';
+  const width = video.videoWidth;
+  const height = video.videoHeight;
   ctx.clearRect(0, 0, width, height);
   ctx.fillRect(0, 0, width, height);
-  let login = localStorage.getItem('login');
-  // console.log(login);
+  let user, name;
+  if (localStorage.getItem('user')) {
+    user = JSON.parse(localStorage.getItem('user'));
+  }
+  if (user) {
+    name = user.name;
+  }
   let char = '0';
 
-  if (login != '' && login != null) {
-    char = login.charAt(0).toUpperCase();
+  if (name) {
+    char = name.charAt(0).toUpperCase();
   }
 
   ctx.beginPath();
@@ -532,8 +288,7 @@ function drawCanvas() {
   ctx.restore();
   // Let us draw a canvas overlay to the local media
   // with the same virtual canvas sent to the peer.
-  let canvasOverlay = document.querySelector('#canvasOverlay');
-  let canvasOverlayCtx = canvasOverlay.getContext('2d');
+  const canvasOverlayCtx = canvasOverlay.getContext('2d');
 
   canvasOverlayCtx.drawImage(
     virtualCanvas,
@@ -544,44 +299,277 @@ function drawCanvas() {
   );
 
   setTimeout(drawCanvas, 100);
-}
+};
 
-function handleGetUserMediaError(e) {
-  switch (e.name) {
+const handleGetUserMediaError = (event) => {
+  switch (event.name) {
     case 'NotFoundError':
-      alert(
-        'Unable to open your call because no camera and/or microphone were found.'
-      );
+      toast({
+        alertClass: 'alert-danger',
+        content:
+          'Unable to open your call because no camera and/or microphone were found.',
+        modal: true,
+      });
       break;
     case 'SecurityError':
     case 'PermissionDeniedError':
       // Do nothing; this is the same as the user canceling the call.
       break;
     default:
-      alert('Error opening your camera and/or microphone: ' + e.message);
+      toast({
+        alertClass: 'alert-danger',
+        content: `Error opening your camera and/or microphone: ${event.message}`,
+        modal: true,
+      });
       break;
   }
+  setTimeout(() => {
+    document.location = `${serverOrigin}`;
+  }, 3200);
+};
 
-  closeVideoCall();
-}
+/* ///////////////////////////////////////////////////////
+/
+/                   Peer Connection setup
+/
+*/ ////////////////////////////////////////////////////////
+
+const createPeerConnection = (token) => {
+  const configuration = {
+    iceservers: [{ urls: 'stun:stun.l.google.com:19302' }],
+  };
+  const peerConnection = new RTCPeerConnection(configuration);
+
+  const pc = {
+    token,
+    peerConnection,
+    iceCandidates: [],
+  };
+
+  connection.push(pc);
+
+  peerConnection.onicecandidate = function (event) {
+    if (event.candidate) {
+      socket.send(
+        JSON.stringify({
+          token: callToken,
+          type: 'ice-candidate',
+          candidate: event.candidate,
+        })
+      );
+    }
+  };
+
+  // let the "negotiationneeded" event trigger offer generation
+  peerConnection.onnegotiationneeded = async () => {
+    console.log(
+      `Negotiation Needed. IceConnectionState is: ${peerConnection.iceConnectionState}`
+    );
+    try {
+      if (peerConnection.iceConnectionState !== 'new') {
+        await peerConnection.setLocalDescription();
+        // send the offer to the other peer
+        socket.send(
+          JSON.stringify({
+            token: callToken,
+            type: 'description',
+            sdp: peerConnection.localDescription,
+          })
+        );
+      }
+    } catch (error) {
+      console.log(error);
+    }
+  };
+
+  peerConnection.ontrack = function (event) {
+    console.log('ontrack called. The event is:');
+    console.log(event);
+    const track = event.track;
+    const type = track.kind;
+    console.log(type);
+
+    let remoteVideoCreated = allMediaStreams.find(
+      (stream) => stream.videoId === 'remote_video'
+    );
+    let videoShare = allMediaStreams.find(
+      (stream) => stream.videoId === 'video_share'
+    );
+    if (!remoteVideoCreated) {
+      // Create remote video from peer
+      remoteVideoCreated = createVideo('remote_video', event);
+
+      // Save mediaStream from remote
+      allMediaStreams.push({
+        mediaStream: remoteVideoCreated,
+        videoId: 'remote_video',
+      });
+
+      // Enable hangup button
+      hangup.disabled = false;
+      hangup.addEventListener('click', hangUpCall);
+
+      // Enable mute button
+      mute.disabled = false;
+
+      // Allow video to be shared with remote
+      shareVideo.disabled = false;
+      shareVideo.addEventListener('click', createVideoElement);
+
+      // Allow screen to be shared with remote
+      shareScreen.disabled = false;
+      shareScreen.addEventListener('click', sharedScreen);
+      replaceScreen.disabled = false;
+      replaceScreen.addEventListener('click', replaceShareScreen);
+
+      // Enable canvas message to be selected
+      canvasChat.disabled = false;
+      canvasChat.addEventListener('click', toggleCanvasChat);
+
+      // Remote video has additional streams to add
+    } else if (remoteVideoCreated.mediaStream.id === event.streams[0].id) {
+      document.querySelector('#remote_video').srcObject = event.streams[0];
+
+      // If on track is not from remote video camera it should be from a video
+      // or screen sharing
+    } else if (!videoShare) {
+      videoShare = createVideo('video_share', event);
+      allMediaStreams.push({ mediaStream: videoShare, videoId: 'video_share' });
+      console.log('Shared Video Arrived');
+
+      shareVideo.disabled = true;
+
+      shareScreen.disabled = true;
+
+      // Check for tracks removed
+      setTimeout(checkRemoveTrack, 1000);
+
+      // video or screen sharing has additional tracks to add
+    } else if (videoShare.mediaStream.id === event.streams[0].id) {
+      document.querySelector('#video_share').srcObject = event.streams[0];
+
+      // track not related with remote camera or video/screen sharing
+    } else {
+      console.log('ontrack received, but not handled:');
+      console.log(event.streams[0].id);
+    }
+  };
+
+  peerConnection.addEventListener(
+    'iceconnectionstatechange',
+    () => {
+      callState.className = `${peerConnection.iceConnectionState}-state`;
+
+      {
+        switch (peerConnection.iceConnectionState) {
+          case 'new':
+            console.log(
+              'The ICE agent is gathering addresses or is waiting to be given remote candidates'
+            );
+            break;
+          case 'checking':
+            console.log('The ICE agent is checking candidates.');
+            break;
+          case 'connected':
+            console.log('The ice connection has been established.');
+            break;
+          case 'completed':
+            console.log('ICE has found a connection for all components.');
+            break;
+          case 'closed':
+            console.log('Call closed');
+            toast({
+              alertClass: 'alert-danger',
+              content: 'Peer closed the call',
+              modal: true,
+            });
+            setTimeout(() => {
+              if (partySide === 'owner') {
+                hangupReceivedByCaller();
+              } else {
+                document.location = `${serverOrigin}`;
+              }
+            }, 3200);
+            break;
+          case 'failed':
+            console.log('Call failed');
+            toast({
+              alertClass: 'alert-danger',
+              content: 'Call failed',
+              modal: true,
+            });
+            setTimeout(() => {
+              if (partySide === 'owner') {
+                hangupReceivedByCaller();
+              } else {
+                document.location = `${serverOrigin}`;
+              }
+            }, 3200);
+            break;
+          case 'disconnected':
+            console.log('State disconnected');
+            toast({
+              alertClass: 'alert-danger',
+              content: 'Peer disconnected',
+              modal: true,
+            });
+            setTimeout(() => {
+              if (partySide === 'owner') {
+                hangupReceivedByCaller();
+              } else {
+                document.location = `${serverOrigin}`;
+              }
+            }, 3200);
+            break;
+        }
+      }
+    },
+    false
+  );
+  return peerConnection;
+};
+
+/* ///////////////////////////////////////////////////////
+/
+/                   WebSockets setup
+/
+*/ ////////////////////////////////////////////////////////
 
 // handle signals as a caller
-function callerSignalling(event) {
+const callerSignalling = (event) => {
   const signal = JSON.parse(event.data);
   if (signal.type === 'caller_arrived') {
+    console.log('caller_arrived');
     // Server asks this instance to be Callee Leg
     // probably there is already another instance
     // with the same credentials in the bridge
     socket.onmessage = calleeSignalling;
     partySide = 'callee';
-    // Set listeners for data channel
-    peerConnection.ondatachannel = onDataChannel;
     document.title = 'Callee Leg';
   } else if (signal.type === 'callee_arrived') {
     document.title = 'Caller Leg';
-    if (dataChannel === null) {
-      setDataChannel();
+    const peerConnection = createPeerConnection(signal.token);
+    setDataChannel(peerConnection);
+
+    // add camera and mic stream to pc
+    const { mediaStream } = allMediaStreams.find(
+      (stream) => stream.videoId === 'local_video'
+    );
+    mediaStream
+      .getTracks()
+      .forEach((track) => peerConnection.addTrack(track, mediaStream));
+
+    // if video is in mute send canvas instead
+    if (noVideoCall) {
+      const canvasStream = allMediaStreams.find(
+        (stream) => stream.videoId === 'canvas'
+      );
+      peerConnection
+        .getSenders()
+        .find((sender) => sender.track.kind === 'video')
+        .replaceTrack(canvasStream.mediaStream.getVideoTracks()[0]);
     }
+
     peerConnection
       .createOffer()
       .then(function (offer) {
@@ -598,13 +586,28 @@ function callerSignalling(event) {
           })
         );
       })
-      .catch(function (err) {
-        log_error(err);
+      .catch(function (error) {
+        console.log(error);
       });
   } else if (signal.type === 'ice-candidate') {
     console.log('New ice-candidate message received.');
-    peerConnection.addIceCandidate(new RTCIceCandidate(signal.candidate));
+    const { peerConnection } = connection.find(
+      (pc) => pc.token === signal.token
+    );
+    // if remoteDescription not set, queue iceCandidate
+    if (peerConnection && peerConnection.remoteDescription) {
+      peerConnection.addIceCandidate(new RTCIceCandidate(signal.candidate));
+    } else {
+      connection.map((pc) => {
+        if (pc.token === signal.token) {
+          pc.iceCandidates.push(signal.candidate);
+        }
+      });
+    }
   } else if (signal.type === 'description') {
+    const { peerConnection, iceCandidates } = connection.find(
+      (pc) => pc.token === signal.token
+    );
     console.log(
       `New description message received. Set remote description. Type is ${signal.sdp.type}`
     );
@@ -613,15 +616,33 @@ function callerSignalling(event) {
         .setRemoteDescription(signal.sdp)
         .then(function () {
           console.log('Remote Session Description set.');
+          // read iceCandidates in queue and apply to pc
+          iceCandidates.forEach((candidate) =>
+            peerConnection.addIceCandidate(new RTCIceCandidate(candidate))
+          );
+          connection.forEach((pc) => {
+            if (pc.token === signal.token) {
+              pc.iceCandidates = [];
+            }
+          });
         })
-        .catch(function (err) {
-          log_error(err);
+        .catch(function (error) {
+          console.log(error);
         });
     } else {
       peerConnection
         .setRemoteDescription(signal.sdp)
         .then(function () {
           console.log('Remote Session Description set. Creating answer');
+          // read iceCandidates in queue and apply to pc
+          iceCandidates.forEach((candidate) =>
+            peerConnection.addIceCandidate(new RTCIceCandidate(candidate))
+          );
+          connection.forEach((pc) => {
+            if (pc.token === signal.token) {
+              pc.iceCandidates = [];
+            }
+          });
           return peerConnection.createAnswer();
         })
         .then(function (answer) {
@@ -638,28 +659,82 @@ function callerSignalling(event) {
             })
           );
         })
-        .catch(function (err) {
-          log_error(err);
+        .catch(function (error) {
+          console.log(error);
         });
     }
   } else if (signal.type === 'hang-up') {
+    const { peerConnection } = connection.find(
+      (pc) => pc.token === signal.token
+    );
     console.log('Received hang up notification from other peer');
-    hangupReceivedByCaller();
-  } else if (signal.type === 'full_bridge') {
-    // TODO
+    hangupReceivedByCaller(signal.token);
+  } else if (signal.type === 'hard-reset') {
+    socket.close();
+    toast({
+      alertClass: 'alert-danger',
+      content: 'Another user joined with the same credentials',
+      modal: true,
+    });
+    setTimeout(() => {
+      document.location = `${serverOrigin}/meeting/`;
+    }, 3200);
   } else {
     console.log(`Non-handled ${signal.type} received`);
   }
-}
+};
 
+// ***************************
+//
 // handle signals as a callee
+//
+// ***************************
 
-function calleeSignalling(event) {
+const calleeSignalling = (event) => {
   const signal = JSON.parse(event.data);
+  let peerConnection;
+  const pc = connection.find((pc) => pc.token === signal.token);
+  if (!pc) {
+    peerConnection = createPeerConnection(signal.token);
+    // Set listeners for data channel
+    peerConnection.ondatachannel = onDataChannel;
+    // add camera and mic stream to pc
+    const { mediaStream } = allMediaStreams.find(
+      (stream) => stream.videoId === 'local_video'
+    );
+    // add mediaStream to pc
+    mediaStream
+      .getTracks()
+      .forEach((track) => peerConnection.addTrack(track, mediaStream));
+    // if video is in mute send canvas instead
+    if (noVideoCall) {
+      const canvasStream = allMediaStreams.find(
+        (stream) => stream.videoId === 'canvas'
+      );
+      peerConnection
+        .getSenders()
+        .find((sender) => sender.track.kind === 'video')
+        .replaceTrack(canvasStream.mediaStream.getVideoTracks()[0]);
+    }
+  } else {
+    peerConnection = pc.peerConnection;
+  }
   if (signal.type === 'ice-candidate') {
     console.log('New Ice Candidate message received.');
-    peerConnection.addIceCandidate(new RTCIceCandidate(signal.candidate));
+    // if remoteDescription not set, queue iceCandidate
+    if (peerConnection && peerConnection.remoteDescription) {
+      peerConnection.addIceCandidate(new RTCIceCandidate(signal.candidate));
+    } else {
+      connection.map((pc) => {
+        if (pc.token === signal.token) {
+          pc.iceCandidates.push(signal.candidate);
+        }
+      });
+    }
   } else if (signal.type === 'description') {
+    const { iceCandidates } = connection.find(
+      (pc) => pc.token === signal.token
+    );
     console.log(
       `New description message received. Set remote description. Type is ${signal.sdp.type}`
     );
@@ -668,6 +743,15 @@ function calleeSignalling(event) {
         .setRemoteDescription(signal.sdp)
         .then(function () {
           console.log('Remote Session Description set. Creating answer');
+          // read iceCandidates in queue and apply to pc
+          iceCandidates.forEach((candidate) =>
+            peerConnection.addIceCandidate(new RTCIceCandidate(candidate))
+          );
+          connection.forEach((pc) => {
+            if (pc.token === signal.token) {
+              pc.iceCandidates = [];
+            }
+          });
           return peerConnection.createAnswer();
         })
         .then(function (answer) {
@@ -684,33 +768,133 @@ function calleeSignalling(event) {
             })
           );
         })
-        .catch(function (err) {
-          log_error(err);
+        .catch(function (error) {
+          console.log(error);
         });
     } else {
       peerConnection
         .setRemoteDescription(signal.sdp)
         .then(function () {
           console.log('Remote Session Description set.');
+          // read iceCandidates in queue and apply to pc
+          iceCandidates.forEach((candidate) =>
+            peerConnection.addIceCandidate(new RTCIceCandidate(candidate))
+          );
+          connection.forEach((pc) => {
+            if (pc.token === signal.token) {
+              pc.iceCandidates = [];
+            }
+          });
         })
-        .catch(function (err) {
-          log_error(err);
+        .catch(function (error) {
+          console.log(error);
         });
     }
   } else if (signal.type === 'hang-up') {
+    toast({
+      alertClass: 'alert-danger',
+      content: 'Hang-up received',
+      modal: true,
+    });
     console.log('Received hang up notification from other peer');
-    closeVideoCall();
-  } else if (signal.type === 'full_bridge') {
-    // TODO
+    setTimeout(() => {
+      document.location = `${serverOrigin}`;
+    }, 3200);
+  } else if (signal.type === 'full-bridge') {
+    toast({
+      alertClass: 'alert-danger',
+      content: 'Room is full',
+      modal: true,
+    });
+    setTimeout(() => {
+      document.location = `${serverOrigin}`;
+    }, 3200);
+  } else if (signal.type === 'not-available') {
+    toast({
+      alertClass: 'alert-danger',
+      content: 'The meeting code provided does not exist',
+      modal: true,
+    });
+    setTimeout(() => {
+      document.location = `${serverOrigin}`;
+    }, 3200);
+  } else if (signal.type === 'reset') {
+    toast({
+      alertClass: 'alert-danger',
+      content: 'Meeting reset',
+      modal: true,
+    });
+    socket.close();
+    setTimeout(() => {
+      location.reload();
+    }, 2000);
   } else {
     console.log(`Non-handled ${signal.type} received`);
   }
-}
+};
 
-// generic error handler
-function log_error(error) {
-  console.log(error);
-}
+const hangupReceivedByCaller = (token) => {
+  const remoteVideoElement = document.getElementById('remote_video');
+  const remoteVideoContainer = document.querySelector('.remoteVideoContainer');
+  const videoContainer = document.querySelector('#videoContainer');
+
+  allMediaStreams = allMediaStreams.filter(
+    (mediaStream) => mediaStream.videoId !== 'remote_video'
+  );
+  const { peerConnection } = connection.find((pc) => pc.token === token);
+  peerConnection.close();
+  callState.className = 'closed-state';
+  connection = connection.filter((pc) => pc.token !== token);
+  if (remoteVideoElement && remoteVideoElement.srcObject) {
+    remoteVideoElement.pause();
+    remoteVideoElement.srcObject.getTracks().forEach((track) => track.stop());
+    remoteVideoElement.removeAttribute('src');
+    remoteVideoElement.load();
+    // remove the video element
+    for (const child of remoteVideoContainer.children) {
+      child.remove();
+    }
+    // remove the div element
+    for (const child of videoContainer.children) {
+      if (child.classList.contains('remoteVideoContainer')) {
+        child.remove();
+      }
+    }
+  }
+  hangup.disabled = true;
+  shareScreen.disabled = true;
+  replaceScreen.disabled = true;
+  mute.disabled = true;
+  shareVideo.disabled = true;
+  canvasChat.disabled = true;
+};
+
+const hangUpCall = () => {
+  // socket open?
+  const OPEN = 1;
+  if (socket.readyState === OPEN) {
+    socket.send(
+      JSON.stringify({
+        token: callToken,
+        type: 'hang-up',
+      })
+    );
+  }
+  if (partySide === 'caller') {
+    setTimeout(() => {
+      document.location = `${serverOrigin}/meeting/`;
+    }, 300);
+  } else {
+    setTimeout(() => {
+      document.location = `${serverOrigin}`;
+    });
+  }
+};
+
+//
+// end of websockets
+//
+
 /**
  * createVideo is called when ontrack event fires in the receiver
  * side to create the video element. It passes the video #id for
@@ -718,10 +902,6 @@ function log_error(error) {
  * for remote video or screen share) and the on track event. It returns the
  * ontrack event.streams[0], to store on allMediaStreams for subsequent ontrack
  * events for the same stream.
- *
- * @param {*} videoid
- * @param {*} event
- * @return {*}
  */
 function createVideo(videoid, event) {
   // creates a video element
@@ -730,7 +910,6 @@ function createVideo(videoid, event) {
   vid.id = videoid;
   vid.className = 'smallVideoR';
   vid.setAttribute('autoplay', true);
-  // vid.setAttribute('controls', true);
   let videoContainer = document.querySelector('#videoContainer');
   let divContainer = document.createElement('div');
   if (videoid === 'video_share') {
@@ -758,7 +937,7 @@ function createVideo(videoid, event) {
 }
 // This function checks if a track was removed to
 // remove sharing video elements
-function checkRemoveTrack() {
+const checkRemoveTrack = () => {
   let timeout = true;
   const oneMediaStream = allMediaStreams.find(
     (mediaStream) => mediaStream.videoId === 'video_share'
@@ -789,183 +968,132 @@ function checkRemoveTrack() {
 
     timeout = false;
 
-    document.querySelector('#shareVideo').disabled = false;
+    shareVideo.disabled = false;
     if (!sharingScreen) {
-      document.querySelector('#sharescreen').disabled = false;
+      shareScreen.disabled = false;
+      replaceScreen.disabled = false;
     }
   }
   if (timeout) {
     setTimeout(checkRemoveTrack, 1000);
   }
-}
-
-const hangupReceivedByCaller = () => {
-  const remoteVideoElement = document.getElementById('remote_video');
-  const remoteVideoContainer = document.querySelector('.remoteVideoContainer');
-  const videoContainer = document.querySelector('#videoContainer');
-  if (peerConnection) {
-    peerConnection.close();
-    peerConnection = null;
-  }
-  if (remoteVideoElement && remoteVideoElement.srcObject) {
-    remoteVideoElement.pause();
-    remoteVideoElement.srcObject.getTracks().forEach((track) => track.stop());
-    remoteVideoElement.removeAttribute('src');
-    remoteVideoElement.load();
-    // remove the video element
-    for (const child of remoteVideoContainer.children) {
-      child.remove();
-    }
-    // remove the div element
-    for (const child of videoContainer.children) {
-      if (child.classList.contains('remoteVideoContainer')) {
-        child.remove();
-      }
-    }
-  }
-  document.getElementById('hangup').disabled = true;
-  document.getElementById('sharescreen').disabled = true;
-  document.querySelector('#mute').disabled = true;
-  document.querySelector('#shareVideo').disabled = true;
-  callState.style.backgroundColor = 'honeydew';
 };
-
-const closeVideoCall = () => {
-  console.log('Closing Video Call');
-  const remoteVideo = document.getElementById('remote_video');
-  const localVideo = document.getElementById('local_video');
-
-  if (peerConnection) {
-    if (remoteVideo && remoteVideo.srcObject) {
-      remoteVideo.srcObject.getTracks().forEach((track) => track.stop());
-      remoteVideo.srcObject = null;
-      remoteVideo.style.backgroundColor = '#333333';
-      remoteVideo.removeAttribute('src');
-      remoteVideo.removeAttribute('srcObject');
-    }
-
-    if (localVideo.srcObject) {
-      localVideo.srcObject.getTracks().forEach((track) => track.stop());
-      localVideo.srcObject = null;
-      localVideo.style.backgroundColor = '#333333';
-    }
-
-    peerConnection.close();
-    peerConnection = null;
-  }
-
-  localVideo.removeAttribute('src');
-
-  document.getElementById('hangup').disabled = true;
-  document.getElementById('sharescreen').disabled = true;
-  document.querySelector('#mute').disabled = true;
-  document.querySelector('#shareVideo').disabled = true;
-  callState.style.backgroundColor = 'honeydew';
-};
-
-function hangUpCall() {
-  socket.send(
-    JSON.stringify({
-      token: callToken,
-      type: 'hang-up',
-    })
-  );
-  closeVideoCall();
-}
-
+//
 // Share screen using either local media stream replace
 // or a new video
-function sharedScreen() {
+//
+const replaceShareScreen = () => {
   // Remove sidebar
-  document.querySelector('.menu').classList.toggle('show-menu');
+  links.classList.toggle('show-menu');
   // disable share screen button
-  document.querySelector('#sharescreen').disabled = true;
+  shareScreen.disabled = true;
+  replaceScreen.disabled = true;
   navigator.mediaDevices
     .getDisplayMedia({ cursor: true })
     .then((stream) => {
       const screenTrack = stream.getTracks()[0];
-      if (screenReplaceVideo) {
-        // replaces local video sender track
-        // indicates sharing screen for no video canvas replacement
-        sharingScreen = true;
-        let originalStream = allMediaStreams.find(
-          (sender) => sender.videoId === 'local_video'
-        );
-        // console.log('Original stream is: ');
-        // console.log(originalStream);
-        originalStream.senders
+      // replaces local video sender track
+      // indicates sharing screen for no video canvas replacement
+      sharingScreen = true;
+      connection.length &&
+        connection[0].peerConnection
+          .getSenders()
           .find((sender) => sender.track.kind === 'video')
           .replaceTrack(screenTrack);
 
-        // set callback for ended track
-        screenTrack.onended = function () {
-          sharingScreen = false;
-          document.querySelector('#sharescreen').disabled = false;
-          // check status of camera on / off
-          if (noVideoCall) {
-            // camera is off, sends canvas stream
-            let originalStream = allMediaStreams.find(
-              (sender) => sender.videoId === 'canvas'
-            );
-            let originalTrack = originalStream.mediaStream.getTracks()[0];
-            // canvas media stream object holds sender from local_video
-            originalStream.senders
+      // set callback for ended track
+      screenTrack.onended = function () {
+        sharingScreen = false;
+        shareScreen.disabled = false;
+        replaceScreen.disabled = false;
+        // check status of camera on / off
+        if (noVideoCall) {
+          // camera is off, sends canvas stream
+          let originalStream = allMediaStreams.find(
+            (sender) => sender.videoId === 'canvas'
+          );
+          let originalTrack = originalStream.mediaStream.getTracks()[0];
+          // canvas media stream object holds sender from local_video
+          originalStream.senders
+            .find((sender) => sender.track.kind === 'video')
+            .replaceTrack(originalTrack);
+        } else {
+          // camera is on, sends local media video
+          const originalStream = allMediaStreams.find(
+            (stream) => stream.videoId === 'local_video'
+          );
+
+          const originalTrack = originalStream.mediaStream.getTracks()[1];
+
+          connection.length &&
+            connection[0].peerConnection
+              .getSenders()
               .find((sender) => sender.track.kind === 'video')
               .replaceTrack(originalTrack);
-          } else {
-            // camera is on, sends local media video
-            let originalStream = allMediaStreams.find(
-              (sender) => sender.videoId === 'local_video'
-            );
+        }
+      };
+    })
+    .catch(function (error) {
+      console.log(error);
+    });
+};
 
-            let originalTrack = originalStream.mediaStream.getTracks()[1];
-
-            originalStream.senders
-              .find((sender) => sender.track.kind === 'video')
-              .replaceTrack(originalTrack);
-          }
-        };
-      } else {
-        // screen sent in a new track
-        let screenSender = [];
+const sharedScreen = () => {
+  // Remove sidebar
+  links.classList.toggle('show-menu');
+  // disable share screen button
+  shareScreen.disabled = true;
+  replaceScreen.disabled = true;
+  navigator.mediaDevices
+    .getDisplayMedia({ cursor: true })
+    .then((stream) => {
+      const screenTrack = stream.getTracks()[0];
+      // screen sent in a new track
+      let screenSender = [];
+      connection.forEach((pc) => {
+        const { peerConnection } = pc;
         stream
           .getTracks()
           .forEach((track) =>
             screenSender.push(peerConnection.addTrack(track, stream))
           );
-        // store media stream in peer connection object
-        allMediaStreams.push({
-          mediaStream: stream,
-          senders: screenSender,
-          videoId: 'screen',
-        });
-        // disable share video buttons
-        document.querySelector('#shareVideo').disabled = true;
+      });
+      // store media stream in peer connection object
+      allMediaStreams.push({
+        mediaStream: stream,
+        senders: screenSender,
+        videoId: 'screen',
+      });
+      // disable share video buttons
+      shareVideo.disabled = true;
 
-        screenTrack.onended = function () {
-          let canvasStream = allMediaStreams.find(
-            (stream) => stream.videoId === 'screen'
-          );
-          // get senders from screen
+      screenTrack.onended = function () {
+        let canvasStream = allMediaStreams.find(
+          (stream) => stream.videoId === 'screen'
+        );
+        // get senders from screen
+        connection.forEach((pc) => {
+          const { peerConnection } = pc;
           canvasStream.senders.forEach((sender) =>
             peerConnection.removeTrack(sender)
           );
-          // remove canvas stream object from peer connection
-          allMediaStreams = allMediaStreams.filter(
-            (stream) => stream.videoId !== 'screen'
-          );
-          // enables share screen and video buttons
-          document.querySelector('#sharescreen').disabled = false;
-          document.querySelector('#shareVideo').disabled = false;
-        };
-      }
+        });
+        // remove canvas stream object from peer connection
+        allMediaStreams = allMediaStreams.filter(
+          (stream) => stream.videoId !== 'screen'
+        );
+        // enables share screen and video buttons
+        shareScreen.disabled = false;
+        replaceScreen.disabled = false;
+        shareVideo.disabled = false;
+      };
     })
-    .catch(function (err) {
-      log_error(err);
+    .catch(function (error) {
+      console.log(error);
     });
-}
+};
 
-function videoCreateStream() {
+const videoCreateStream = () => {
   // share video playing
   // check whether media stream object is already created
   let myVideoStream = allMediaStreams.find(
@@ -994,18 +1122,19 @@ function videoCreateStream() {
   } else {
     console.log('captureStream() not supported');
   }
-}
+};
 
-function setupCaptureStream(myVideoStream) {
+const setupCaptureStream = (myVideoStream) => {
   const videoTracks = myVideoStream.getVideoTracks();
 
   // Add tracks
   let senderSharedVideo = [];
-  myVideoStream
-    .getTracks()
-    .forEach((track) =>
-      senderSharedVideo.push(peerConnection.addTrack(track, myVideoStream))
-    );
+  connection.forEach((pc) => {
+    const { peerConnection } = pc;
+    myVideoStream.getTracks().forEach((track) => {
+      senderSharedVideo.push(peerConnection.addTrack(track, myVideoStream));
+    });
+  });
 
   console.log(senderSharedVideo);
   // store media stream object in peer connection
@@ -1014,8 +1143,6 @@ function setupCaptureStream(myVideoStream) {
     senders: senderSharedVideo,
     videoId: 'myVideo',
   });
-
-  // console.log("RTCRtpSender is: " + senderSharedVideo);
 
   // create button to stop the media
   let buttonElement = document.createElement('button');
@@ -1028,8 +1155,7 @@ function setupCaptureStream(myVideoStream) {
   spanElement.textContent = 'Stop Sharing';
   buttonElement.append(iElement, spanElement);
   // insert button
-  let shareScreenElement = document.querySelector('#sharescreen');
-  shareScreenElement.parentNode.append(buttonElement);
+  shareScreen.parentNode.append(buttonElement);
   // add event to stop video
   buttonElement.addEventListener('click', stopVideo);
 
@@ -1041,23 +1167,27 @@ function setupCaptureStream(myVideoStream) {
         allMediaStreams.splice(i, 1);
       }
     }
-    peerConnection.removeTrack(senderSharedVideo);
-    document.querySelector('#shareVideo').disabled = false;
-    if (screenSharing) document.querySelector('#sharescreen').disabled = false;
+    connection.forEach((pc) => {
+      const { peerConnection } = pc;
+      peerConnection.removeTrack(senderSharedVideo);
+    });
+    shareVideo.disabled = false;
+    if (!sharingScreen) {
+      shareScreen.disabled = false;
+      replaceScreen.disabled = false;
+    }
     console.log('Call Back Function CALLED');
   };
-}
+};
 
-function createVideoElement() {
+const createVideoElement = () => {
   // disable sharing a new video
-  document.querySelector('#shareVideo').disabled = true;
+  shareVideo.disabled = true;
   // disable sharing a screen if it is not using the same stream of the video camera
-  if (!screenReplaceVideo) {
-    document.querySelector('#sharescreen').disabled = true;
-  }
+  shareScreen.disabled = true;
 
   // hide sidebar
-  document.querySelector('.menu').classList.toggle('show-menu');
+  links.classList.toggle('show-menu');
   // create a video element
   const vid = document.createElement('video');
   vid.id = 'myVideo';
@@ -1089,9 +1219,9 @@ function createVideoElement() {
 
   vid.addEventListener('dblclick', videoDblClick);
   vid.addEventListener('loadeddata', checkSharing);
-}
+};
 
-function checkSharing() {
+const checkSharing = () => {
   // Was the stream created
   if (!allMediaStreams.find((stream) => stream.videoId === 'myVideo')) {
     let playPromise = document.querySelector('#myVideo').play();
@@ -1107,14 +1237,14 @@ function checkSharing() {
         .catch(function (error) {
           // Automatic playback failed.
           console.log('automatic playblack failed');
-          log_error(error);
+          console.log(error);
         });
     }
   }
-}
+};
 
-function stopVideo() {
-  document.querySelector('.menu').classList.toggle('show-menu');
+const stopVideo = () => {
+  links.classList.toggle('show-menu');
   let videoElement = document.querySelector('#myVideo');
 
   videoElement.removeEventListener('loadeddata', checkSharing);
@@ -1125,10 +1255,11 @@ function stopVideo() {
   // In case the video share did not succeed we remove it
   // but the stream may not be built
   if (originalStream) {
-    // console.log('senders:');
-    // console.log(originalStream.senders);
-    originalStream.senders.forEach((track) => {
-      peerConnection.removeTrack(track);
+    connection.forEach((pc) => {
+      const { peerConnection } = pc;
+      originalStream.senders.forEach((track) => {
+        peerConnection.removeTrack(track);
+      });
     });
 
     allMediaStreams = allMediaStreams.filter(
@@ -1151,14 +1282,15 @@ function stopVideo() {
   }
   // remove container for video sharing
   document.querySelector('.localVideoShareContainer').remove();
-  document.querySelector('#shareVideo').disabled = false;
+  shareVideo.disabled = false;
 
   if (!sharingScreen) {
-    document.querySelector('#sharescreen').disabled = false;
+    shareScreen.disabled = false;
+    replaceScreen.disabled = false;
   }
-}
+};
 
-function videoDblClick(event) {
+const videoDblClick = (event) => {
   event.preventDefault();
   event.stopPropagation();
   const t = event.target;
@@ -1167,18 +1299,12 @@ function videoDblClick(event) {
     t.parentNode.classList.toggle('fullScreenLocal');
     // set canvas width and height accordingly otherwise its
     // size won't match the video when changing its size
-    let canvas = document.getElementById('canvasOverlay');
-    canvas.width = t.offsetWidth;
-    canvas.height = t.offsetHeight;
+    canvasOverlay.width = t.offsetWidth;
+    canvasOverlay.height = t.offsetHeight;
   }
-}
+};
 
-function muteLocalVideo(event) {
-  const vid = document.querySelector('#local_video');
-  const mediaStream = allMediaStreams.find(
-    (stream) => stream.videoId === 'local_video'
-  );
-
+const muteLocalVideo = (event) => {
   const t = event.target;
   // console.log(t.nodeName, t.parentNode);
   if (t.nodeName === 'IMG') {
@@ -1186,22 +1312,15 @@ function muteLocalVideo(event) {
   } else {
     t.classList.toggle('unmute');
   }
-  if (vid.muted) {
-    vid.muted = false;
-    mediaStream.senders.map((sender) => {
+  connection.length &&
+    connection[0].peerConnection.getSenders().forEach((sender) => {
       if (sender.track.kind === 'audio') {
-        sender.track.enabled = true;
+        sender.track.enabled = video.muted;
       }
     });
-  } else {
-    vid.muted = true;
-    mediaStream.senders.map((sender) => {
-      if (sender.track.kind === 'audio') {
-        sender.track.enabled = false;
-      }
-    });
-  }
-  // console.log(`Local video is muted: ${vid.muted}`);
-}
+  console.log(video.muted);
+  video.muted = !video.muted;
+  console.log(video.muted);
+};
 
-export { peerConnection, partySide, callToken };
+export { partySide, callToken };

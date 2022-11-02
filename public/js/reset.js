@@ -12,13 +12,14 @@ NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF OR IN CONNECTION WITH THE US
 OF THIS SOFTWARE.
 */
 
+import { toast } from './utils/toast.js';
+
 window.onload = function init() {
   const query = new URLSearchParams(window.location.search);
   const inputPassword = document.getElementById('password');
   const form = document.querySelector('.form');
   const sectionMeeting = document.querySelector('.meeting');
   const sectionPage = document.querySelector('.page');
-  const alert = document.querySelector('.alert-show');
   let password = '';
 
   const getPassword = (e) => {
@@ -39,34 +40,20 @@ window.onload = function init() {
       inputPassword.value = '';
       sectionPage.classList.add('no-page');
       sectionMeeting.classList.remove('no-meeting');
-      alert.classList.add('alert-success');
-      alert.style.opacity = '1';
-      alert.textContent = `Success, redirecting to login page shortly`;
+      toast({
+        alertClass: 'alert-success',
+        content: 'Success, redirecting to login page shortly',
+      });
       setTimeout(() => {
-        alert.style.opacity = '0';
-        alert.classList.remove('alert-success');
         document.location = `${document.location.origin}/login/`;
-      }, 2000);
+      }, 3200);
     } catch (error) {
       sectionPage.classList.add('no-page');
       sectionMeeting.classList.remove('no-meeting');
-      alert.classList.add('alert-danger');
-      alert.style.opacity = '1';
-      axios.isAxiosError(error)
-        ? (alert.textContent = error.response.data.msg)
-        : (alert.textContent = error);
+      toast({ alertClass: 'alert-danger', error });
       setTimeout(() => {
-        alert.style.opacity = '0';
-        setTimeout(() => {
-          alert.textContent = '';
-          alert.classList.remove('alert-danger');
-          form.classList.remove('no-form');
-          form.style.opacity = '0';
-          setTimeout(() => {
-            form.style.opacity = '1';
-          }, 300);
-        }, 1200);
-      }, 2000);
+        form.classList.remove('no-form');
+      }, 3200);
     }
   };
 

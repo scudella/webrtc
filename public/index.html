@@ -23,8 +23,9 @@ OF THIS SOFTWARE. -->
       href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.2.0/css/all.min.css"
     />
     <!-- js script -->
-    <script src="https://unpkg.com/axios/dist/axios.min.js"></script>
+    <script src="../js/dist/axios1.1.2.min.js"></script>
     <script type="module" src="js/start.js"></script>
+    <script type="module" src="js/utils/toast.js"></script>
     <!-- css -->
     <link rel="stylesheet" href="css/style.css" />
   </head>
@@ -50,9 +51,7 @@ OF THIS SOFTWARE. -->
         <div class="meeting-center">
           <div class="form-container">
             <div class="alertCodeNotProvided">
-              <p class="alert alert-danger alert-show alert-top">
-                Please, provide a meeting code
-              </p>
+              <p class="alert alert-show alert-top"></p>
             </div>
             <form id="form" class="form form-padding">
               <h3>Join a meeting</h3>

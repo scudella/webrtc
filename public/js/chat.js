@@ -12,7 +12,7 @@ NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF OR IN CONNECTION WITH THE US
 OF THIS SOFTWARE.
 */
 
-import { peerConnection, partySide, callToken } from './webrtc.js';
+import { partySide, callToken } from './webrtc.js';
 let canvas;
 let ctx;
 let messages = [];
@@ -32,7 +32,7 @@ class Message {
   }
 }
 
-function toggleCanvasChat() {
+const toggleCanvasChat = () => {
   // Remove menu from the front of the canvas
   document.querySelector('.menu').classList.toggle('show-menu');
   if (!toggleCanvas) {
@@ -164,10 +164,10 @@ function toggleCanvasChat() {
       videoContainer.classList.add('videoContainerNoChatShare');
     }
   }
-}
+};
 
 // Set the data channel for the caller side
-function setDataChannel() {
+function setDataChannel(peerConnection) {
   // sets the label for the data channel
   dataChannel = peerConnection.createDataChannel('chat');
   console.log('data channel created ');
@@ -186,13 +186,19 @@ function receiveMessage(event) {
   // receive object from the other party
   let obj = JSON.parse(event.data);
   // save remote login
-  let login = obj.login;
+  let name = obj.name;
   // save the message
   let msg = obj.message;
 
   // read my login from local storage
-  let myLogin = localStorage.getItem('login');
-  if (login === myLogin) {
+  let myUser, myName;
+  if (localStorage.getItem('user')) {
+    myUser = JSON.parse(localStorage.getItem('user'));
+  }
+  if (myUser) {
+    myName = myUser.name;
+  }
+  if (name === myName) {
     console.log(
       'Login from remote message is equal to local. Are you at localhost?'
     );
@@ -204,7 +210,7 @@ function receiveMessage(event) {
   // the received message, indicating that is not from myself
   // the date, the ws token without the # tag and the caller or callee side
   let messageR = new Message(
-    login,
+    name,
     msg,
     false,
     date,
@@ -236,7 +242,7 @@ function receiveMessage(event) {
 }
 
 // peer_connection call back for ondatachannel on the callee side
-function onDataChannel(event) {
+const onDataChannel = (event) => {
   // setting data channel
   dataChannel = event.channel;
   // when channel opens, just send message to the console
@@ -245,9 +251,9 @@ function onDataChannel(event) {
   };
   // set the call back for receiving messages
   dataChannel.onmessage = receiveMessage;
-}
+};
 
-function chatInput() {
+const chatInput = () => {
   let chatInput = document.querySelector('#chatInput');
   let send = document.querySelector('#send');
   // The text area takes care of the message formatting
@@ -258,9 +264,9 @@ function chatInput() {
   } else {
     send.disabled = true;
   }
-}
+};
 
-function sendMessageChat() {
+const sendMessageChat = () => {
   let chatInput = document.querySelector('#chatInput');
   // Set focus back to the text area
   chatInput.focus();
@@ -268,8 +274,14 @@ function sendMessageChat() {
   // get a new date
   let date = new Date();
   // if there is no login set, let us use 'local'
-  let login = localStorage.getItem('login');
-  login = login === null ? 'local' : login;
+  let user, name;
+  if (localStorage.getItem('user')) {
+    user = JSON.parse(localStorage.getItem('user'));
+  }
+  if (user) {
+    name = user.name;
+  }
+  name = name === undefined ? 'local' : name;
 
   // create a new message object with login, the content of
   // the text area, setting that is from myself, the date,
@@ -277,7 +289,7 @@ function sendMessageChat() {
   // caller or callee. The party side is required when
   // accessing as local host and sharing the same indexed db.
   let messageL = new Message(
-    login,
+    name,
     chatInput.value,
     true,
     date,
@@ -302,16 +314,16 @@ function sendMessageChat() {
   dataChannel.send(
     JSON.stringify({
       message: chatInput.value,
-      login: login,
+      name,
     })
   );
   // disable the send button
   send.disabled = true;
   // cleans up the input message
   chatInput.value = '';
-}
+};
 
-function printMessage(canvas, ctx, messages, messagePos) {
+const printMessage = (canvas, ctx, messages, messagePos) => {
   let x, y;
   // Set y to the bottom of the canvas
   y = canvas.height;
@@ -383,7 +395,7 @@ function printMessage(canvas, ctx, messages, messagePos) {
       internalY += 15;
     });
   }
-}
+};
 
 let roundedRect = function (ctx, x, y, width, height, radius, fill, stroke) {
   ctx.beginPath();
@@ -416,7 +428,7 @@ let roundedRect = function (ctx, x, y, width, height, radius, fill, stroke) {
 //* This function helps to format the message in the canvas.
 //*
 
-function formatMessage(message) {
+const formatMessage = (message) => {
   // Array for the break lines
   let messageLines = [];
   let lineLength = 30;
@@ -492,9 +504,9 @@ function formatMessage(message) {
   }
   // console.log(messageLines);
   return messageLines;
-}
+};
 
-function formatDate(date) {
+const formatDate = (date) => {
   // Get a new date
   let now = new Date();
   let diff = new Date();
@@ -530,9 +542,9 @@ function formatDate(date) {
       return date.toDateString().slice(0, 3) + date.toLocaleString().slice(9);
     }
   }
-}
+};
 
-function createDatabase(dbName) {
+const createDatabase = (dbName) => {
   if (!window.indexedDB) {
     window.alert(
       "Your browser doesn't support a stable version of IndexedDB. You won't be able to save messages."
@@ -597,9 +609,9 @@ function createDatabase(dbName) {
     // Populate messages[] with any previous interaction with the current token
     readAllMessages();
   };
-}
+};
 
-function addMessage(message) {
+const addMessage = (message) => {
   // Create a read / write transaction
   let transaction = dbWebRTC.transaction(['messages'], 'readwrite');
 
@@ -626,9 +638,9 @@ function addMessage(message) {
       `request.onerror, could not insert message, errorcode = ${event.target.error.name}`
     );
   };
-}
+};
 
-function readAllMessages() {
+const readAllMessages = () => {
   if (!dbWebRTC) {
     console.log('dbWebRTC not opened');
   }
@@ -660,12 +672,12 @@ function readAllMessages() {
       }
     }
   };
-}
+};
 
-function slideMessage() {
+const slideMessage = () => {
   let slider = document.getElementById('slider');
   // console.log(slider.value);
   printMessage(canvas, ctx, messages, slider.value);
-}
+};
 
 export { setDataChannel, onDataChannel, dataChannel, toggleCanvasChat };

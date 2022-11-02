@@ -7,13 +7,13 @@
       "type": "chrome",
       "request": "launch",
       "name": "Debug in chrome",
-      "url": "https://192.168.2.118:5000",
-      "webRoot": "${workspaceFolder}/src"
+      "url": "https://localhost:5000",
+      "webRoot": "${workspaceFolder}/public/"
     },
     {
       "name": "Attach Chrome",
       "request": "attach",
-      "type": "pwa-chrome",
+      "type": "chrome",
       "port": 9222
     },
     {
@@ -21,8 +21,7 @@
       "request": "attach",
       "name": "Node: Nodemon",
       "processId": "${command:PickProcess}",
-      "restart": true,
-      "protocol": "inspector"
+      "restart": true
     }
   ],
   "skipFiles": [

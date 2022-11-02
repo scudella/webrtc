@@ -11,7 +11,10 @@ WHATSOEVER RESULTING FROM LOSS OF USE, DATA OR PROFITS, WHETHER IN AN ACTION OF 
 NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF OR IN CONNECTION WITH THE USE OR PERFORMANCE 
 OF THIS SOFTWARE.
 */
-window.onload = function init() {
+
+import { toast } from './utils/toast.js';
+import { fetchRoom, fetchUser } from './utils/user.js';
+window.onload = async function init() {
   let callToken = '';
   let create = true;
   const logoutButton = document.getElementById('logout');
@@ -20,7 +23,6 @@ window.onload = function init() {
   const tokenGen = document.querySelector('#tokenGen');
   const videoButton = document.getElementById('startvideo');
   const avatar = document.querySelector('.user');
-  const alert = document.querySelector('.alert-show');
   const codeCopy = document.getElementById('codeCopy');
   const codeCheck = document.getElementById('codeCheck');
   const urlCopy = document.getElementById('urlCopy');
@@ -30,31 +32,9 @@ window.onload = function init() {
   const meetTitle = document.getElementById('meet-title');
 
   const processGen = () => {
-    callToken = Date.now() + '-' + Math.round(Math.random() * 10000);
+    callToken = `${Date.now()}-${Math.round(Math.random() * 10000)}`;
     inputCode.value = callToken;
     urlField.value = `${document.location.origin}/app/#${callToken}`;
-  };
-  const fetchUser = async () => {
-    try {
-      const response = await axios.get(`/api/v1/users/showMe`);
-      const user = response.data.user;
-      // store user to local storage
-      localStorage.setItem('user', JSON.stringify(user));
-      // get room already created
-      try {
-        const response = await axios.get(`/api/v1/meeting/show-my-room`);
-        inputCode.value = response.data.room;
-        urlField.value = `${document.location.origin}/app/#${inputCode.value}`;
-        callToken = inputCode.value;
-      } catch (error) {
-        axios.isAxiosError(error)
-          ? console.log(error.response.data.msg)
-          : console.log(error);
-      }
-    } catch (error) {
-      localStorage.setItem('user', '');
-      document.location = `${document.location.origin}`;
-    }
   };
 
   const inputURL = () => {
@@ -83,22 +63,16 @@ window.onload = function init() {
   };
   const videoCall = async () => {
     if (!callToken) {
-      alert.classList.add('alert-danger');
-      alert.textContent = 'Please, provide a meeting code';
-      alert.style.opacity = '1';
-      setTimeout(() => {
-        alert.style.opacity = '0';
-        alert.classList.remove('alert-danger');
-      }, 2000);
+      toast({
+        alertClass: 'alert-danger',
+        content: 'Please, provide a meeting code',
+      });
     } else {
       if (callToken.length < 8) {
-        alert.classList.add('alert-danger');
-        alert.textContent = 'Meeting code minimum length is 8';
-        alert.style.opacity = '1';
-        setTimeout(() => {
-          alert.style.opacity = '0';
-          alert.classList.remove('alert-danger');
-        }, 2000);
+        toast({
+          alertClass: 'alert-danger',
+          content: 'Meeting code minimum length is 8',
+        });
       } else {
         if (create) {
           // create a room
@@ -108,35 +82,18 @@ window.onload = function init() {
               `/api/v1/meeting/update-room`,
               room
             );
-            alert.textContent = response.data.msg;
-            alert.classList.add('alert-success');
-            alert.style.opacity = '1';
+            toast({ alertClass: 'alert-success', content: response.data.msg });
+            // store token to app usage
+            localStorage.setItem('callToken', callToken);
+            localStorage.setItem('partySide', 'caller');
             setTimeout(() => {
-              alert.style.opacity = '0';
-              setTimeout(() => {
-                alert.classList.remove('alert-success');
-                alert.textContent = '';
-              }, 1200);
-              // store token to app usage
-              localStorage.setItem('callToken', callToken);
-              localStorage.setItem('partySide', 'caller');
-              document.location = `${document.location.origin}/app/`;
+              document.location = `${document.location.origin}/app/#${callToken}`;
             }, 2000);
           } catch (error) {
-            axios.isAxiosError(error)
-              ? (alert.textContent = error.response.data.msg)
-              : (alert.textContent = error);
-            alert.classList.add('alert-danger');
-            alert.style.opacity = '1';
-            setTimeout(() => {
-              alert.style.opacity = '0';
-              setTimeout(() => {
-                alert.textContent = '';
-                alert.classList.remove('alert-danger');
-              }, 1200);
-            }, 2000);
+            toast({ alertClass: 'alert-danger', error });
           }
         } else {
+          // join another meeting
           // store token to app usage
           localStorage.setItem('callToken', callToken);
           localStorage.setItem('partySide', 'callee');
@@ -213,5 +170,14 @@ window.onload = function init() {
   btnCreate.addEventListener('click', formCreate);
   btnJoin.addEventListener('click', formJoin);
 
-  fetchUser();
+  const user = await fetchUser();
+  if (!user) {
+    document.location = document.location.origin;
+  }
+  const room = await fetchRoom();
+  if (room) {
+    inputCode.value = room;
+    urlField.value = `${document.location.origin}/app/#${inputCode.value}`;
+    callToken = inputCode.value;
+  }
 };

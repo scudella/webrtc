@@ -24,6 +24,7 @@ OF THIS SOFTWARE. -->
     />
     <script type="module" src="../js/webrtc.js"></script>
     <script type="module" src="../js/chat.js"></script>
+    <script type="module" src="../js/utils/toast.js"></script>
     <link rel="stylesheet" href="../css/style.css" />
   </head>
   <body>
@@ -33,13 +34,24 @@ OF THIS SOFTWARE. -->
           <a href="/">
             <img src="../images/logo.svg" class="logo" alt="logo" />
           </a>
-          <button type="button" class="nav-toggle">
-            <i class="fas fa-bars"></i>
-          </button>
+          <ul class="nav-links">
+            <li class="user"></li>
+            <li>
+              <button type="button" class="nav-toggle">
+                <i class="fas fa-bars"></i>
+              </button>
+            </li>
+          </ul>
         </div>
       </div>
     </nav>
     <main>
+      <div class="modal-overlay">
+        <div class="modal-container">
+          <p class="alert alert-show"></p>
+        </div>
+      </div>
+
       <div id="videoContainer" class="videoContainer videoContainerNoChat">
         <div id="localVideoContainer" class="localVideoContainer">
           <video id="local_video" class="localVideo" autoplay muted></video>
@@ -64,18 +76,15 @@ OF THIS SOFTWARE. -->
           <span class="inner-text">Share Screen</span>
         </button>
 
-        <button id="settings" class="menu-item">
-          <img src="../images/settings.svg" alt="settings icon" />
-          <span class="inner-text">Settings</span>
+        <button id="replace-screen" class="menu-item" disabled>
+          <i class="fa-solid fa-share sidebar-icon"></i>
+          <span class="inner-text">Share Screen</span>
         </button>
       </div>
     </aside>
     <footer class="footer-webrtc">
       <div class="footercontainer">
         <div class="buttonsSvg">
-          <!-- <button id="startvideo">
-            <img src="../images/play-svgrepo-com.svg" alt="Start Button" />
-          </button> -->
           <button id="toggleVideo">
             <img src="../images/camera.svg" alt="No video Button" />
           </button>
@@ -93,24 +102,6 @@ OF THIS SOFTWARE. -->
             <i class="fa-regular fa-circle"></i>
           </button>
         </div>
-        <!-- <div class="buttons"> -->
-        <!-- <button id="tokenGen">Gen</button>
-          <label for="givenToken">
-            <span>Token: </span>
-            <input
-              type="text"
-              name="givenToken"
-              id="givenToken"
-              maxlength="20"
-              required
-            />
-          </label>
-          <label for="url">
-            <span>URL: </span>
-            <input type="text" name="url" id="url" maxlength="50" disabled />
-          </label> -->
-        <!-- <button id="call-state" class="closed-state">Status</button> -->
-        <!-- </div> -->
       </div>
     </footer>
   </body>

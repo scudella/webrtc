@@ -1,3 +1,5 @@
+import { toast } from './utils/toast.js';
+
 /*  Copyright (c) 2022 Eduardo S. Libardi, All rights reserved. 
 
 Permission to use, copy, modify, and/or distribute this software for any purpose with or 
@@ -24,7 +26,7 @@ window.onload = function init() {
       const response = await axios.get(`/api/v1/users/showMe`);
       document.location = `${document.location.origin}/meeting/`;
     } catch (error) {
-      console.log(error);
+      console.log('user not logged');
     }
   };
 
@@ -49,10 +51,10 @@ window.onload = function init() {
   };
   const videoCall = () => {
     if (!inputCode.value) {
-      document.querySelector('.alert-show').style.opacity = '1';
-      setTimeout(() => {
-        document.querySelector('.alert-show').style.opacity = '0';
-      }, 2000);
+      toast({
+        alertClass: 'alert-danger',
+        content: 'Please, provide a meeting code',
+      });
     } else {
       // store token to app usage
       localStorage.setItem('callToken', inputCode.value);

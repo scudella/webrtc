@@ -129,6 +129,7 @@ const verifyEmail = async (req, res) => {
   res.status(StatusCodes.OK).json({ msg: 'Email verified' });
 };
 
+// It is possible to someone reset the password without verifying the account first
 const forgotPassword = async (req, res) => {
   const { email } = req.body;
   if (!email) {
