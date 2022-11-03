@@ -1002,10 +1002,18 @@ const replaceShareScreen = () => {
           .replaceTrack(screenTrack);
 
       // set callback for ended track
+      // this is called when replaceScreen share has ended
       screenTrack.onended = function () {
         sharingScreen = false;
-        shareScreen.disabled = false;
         replaceScreen.disabled = false;
+        // check whether this party is sharing a video
+        const videoStream = allMediaStreams.find(
+          (stream) => stream.videoId === 'video_share'
+        );
+        if (!videoStream) {
+          // let the button to share screen enabled
+          shareScreen.disabled = false;
+        }
         // check status of camera on / off
         if (noVideoCall) {
           // camera is off, sends canvas stream
@@ -1318,9 +1326,7 @@ const muteLocalVideo = (event) => {
         sender.track.enabled = video.muted;
       }
     });
-  console.log(video.muted);
   video.muted = !video.muted;
-  console.log(video.muted);
 };
 
 export { partySide, callToken };

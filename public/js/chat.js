@@ -281,7 +281,7 @@ const sendMessageChat = () => {
   if (user) {
     name = user.name;
   }
-  name = name === undefined ? 'local' : name;
+  name = name === undefined ? 'Anonymous' : name;
 
   // create a new message object with login, the content of
   // the text area, setting that is from myself, the date,
@@ -297,7 +297,6 @@ const sendMessageChat = () => {
     callToken,
     partySide
   );
-  console.log(messageL);
   // add message to the indexed db
   addMessage(messageL);
   // add message to the queue
@@ -502,7 +501,6 @@ const formatMessage = (message) => {
   if (j > 1) {
     messageLines.push(message.slice(charPos, i));
   }
-  // console.log(messageLines);
   return messageLines;
 };
 
@@ -658,8 +656,6 @@ const readAllMessages = () => {
         cursor.value.token === callToken
       ) {
         messages.push(cursor.value);
-        // console.log('cursor.value: ');
-        // console.log(cursor.value);
       }
       cursor.continue();
     } else {
@@ -676,7 +672,6 @@ const readAllMessages = () => {
 
 const slideMessage = () => {
   let slider = document.getElementById('slider');
-  // console.log(slider.value);
   printMessage(canvas, ctx, messages, slider.value);
 };
 

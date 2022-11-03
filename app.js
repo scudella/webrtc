@@ -18,6 +18,7 @@ const app = express();
 
 // database
 const connectDB = require('./db/connect');
+const mongoSanitize = require('express-mongo-sanitize');
 
 // other packages
 const morgan = require('morgan');
@@ -42,7 +43,7 @@ app.set('trust proxy', 1);
 app.use(
   rateLimiter({
     windowMs: 15 * 60 * 1000, // 15 minutes
-    max: 300, // Limit each IP to 300 requests per `window` (here, per 15 minutes)
+    max: 400, // Limit each IP to 400 requests per `window` (here, per 15 minutes)
     standardHeaders: true, // Return rate limit info in the `RateLimit-*` headers
     legacyHeaders: false, // Disable the `X-RateLimit-*` headers
   })
@@ -57,6 +58,7 @@ app.use(morgan('tiny'));
 // go through all middleware
 app.use(express.json());
 app.use(cookieParser(process.env.JWT_SECRET));
+app.use(mongoSanitize());
 
 // setup static and middleware
 app.use(express.static('./public'));
