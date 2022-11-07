@@ -615,7 +615,7 @@ const addMessage = (message) => {
 
   // Do something when all the data is added to the database.
   transaction.oncomplete = function (event) {
-    console.log('All done adding messages to the database!');
+    // console.log('All done adding messages to the database!');
   };
 
   transaction.onerror = function (event) {
@@ -659,7 +659,6 @@ const readAllMessages = () => {
       }
       cursor.continue();
     } else {
-      console.log(`Got all messages: ${messages}`);
       // print messages if canvas is present
       if (toggleCanvas) {
         printMessage(canvas, ctx, messages, 1);

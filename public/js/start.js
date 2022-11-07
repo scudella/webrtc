@@ -59,6 +59,7 @@ window.onload = function init() {
       // store token to app usage
       localStorage.setItem('callToken', inputCode.value);
       localStorage.setItem('partySide', 'callee');
+      localStorage.setItem('user', '');
       document.location = `${document.location.origin}/app/#${inputCode.value}`;
     }
   };

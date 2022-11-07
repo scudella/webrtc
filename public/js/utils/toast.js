@@ -18,11 +18,14 @@ const toast = ({ alertClass, content, error, modal }) => {
     setTimeout(() => {
       alert.textContent = '';
       alert.classList.remove(alertClass);
-      modal &&
-        showModal.classList.remove('show-modal') &&
-        showContainer.classList.remove('show-container');
-    }, 1200);
-  }, 2000);
+      if (modal) {
+        setTimeout(() => {
+          showContainer.classList.remove('show-container');
+          showModal.classList.remove('show-modal');
+        }, 1200);
+      }
+    }, 1500);
+  }, 1800);
 };
 
 export { toast };

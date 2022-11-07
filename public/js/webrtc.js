@@ -31,6 +31,7 @@ const toggleButton = document.getElementById('toggleVideo');
 const navToggle = document.querySelector('.nav-toggle');
 const links = document.querySelector('.menu');
 const replaceScreen = document.getElementById('replace-screen');
+const videoContainer = document.querySelector('#videoContainer');
 const video = document.getElementById('local_video');
 const canvasOverlay = document.querySelector('#canvasOverlay');
 const hangup = document.getElementById('hangup');
@@ -383,8 +384,8 @@ const createPeerConnection = (token) => {
   };
 
   peerConnection.ontrack = function (event) {
-    console.log('ontrack called. The event is:');
-    console.log(event);
+    // console.log('ontrack called. The event is:');
+    // console.log(event);
     const track = event.track;
     const type = track.kind;
     console.log(type);
@@ -905,13 +906,12 @@ const hangUpCall = () => {
  */
 function createVideo(videoid, event) {
   // creates a video element
-  let vid = document.createElement('video');
+  const vid = document.createElement('video');
   // add the #id for this particular video
   vid.id = videoid;
   vid.className = 'smallVideoR';
   vid.setAttribute('autoplay', true);
-  let videoContainer = document.querySelector('#videoContainer');
-  let divContainer = document.createElement('div');
+  const divContainer = document.createElement('div');
   if (videoid === 'video_share') {
     divContainer.className = 'sharedVideoContainer';
     vid.className = 'shareVideo';

@@ -66,12 +66,14 @@ window.onload = async function init() {
       toast({
         alertClass: 'alert-danger',
         content: 'Please, provide a meeting code',
+        modal: true,
       });
     } else {
       if (callToken.length < 8) {
         toast({
           alertClass: 'alert-danger',
           content: 'Meeting code minimum length is 8',
+          modal: true,
         });
       } else {
         if (create) {
@@ -82,7 +84,11 @@ window.onload = async function init() {
               `/api/v1/meeting/update-room`,
               room
             );
-            toast({ alertClass: 'alert-success', content: response.data.msg });
+            toast({
+              alertClass: 'alert-success',
+              content: response.data.msg,
+              modal: true,
+            });
             // store token to app usage
             localStorage.setItem('callToken', callToken);
             localStorage.setItem('partySide', 'caller');
@@ -90,7 +96,7 @@ window.onload = async function init() {
               document.location = `${document.location.origin}/app/#${callToken}`;
             }, 2000);
           } catch (error) {
-            toast({ alertClass: 'alert-danger', error });
+            toast({ alertClass: 'alert-danger', error, modal: true });
           }
         } else {
           // join another meeting
