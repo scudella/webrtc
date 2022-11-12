@@ -14,6 +14,7 @@ OF THIS SOFTWARE.
 
 import { setDataChannel, onDataChannel, toggleCanvasChat } from './chat.js';
 import { toast } from './utils/toast.js';
+import { position } from './utils/videoPosition.js';
 
 let callToken = '';
 let socket;
@@ -335,7 +336,7 @@ const handleGetUserMediaError = (event) => {
 /
 */ ////////////////////////////////////////////////////////
 
-const createPeerConnection = (token) => {
+const createPeerConnection = ({ token, fromParty }) => {
   const configuration = {
     iceservers: [{ urls: 'stun:stun.l.google.com:19302' }],
   };
@@ -345,6 +346,9 @@ const createPeerConnection = (token) => {
     token,
     peerConnection,
     iceCandidates: [],
+    fromParty,
+    position: '',
+    sendersSharedVideo: [],
   };
 
   connection.push(pc);
@@ -356,6 +360,7 @@ const createPeerConnection = (token) => {
           token: callToken,
           type: 'ice-candidate',
           candidate: event.candidate,
+          toParty: fromParty,
         })
       );
     }
@@ -375,6 +380,7 @@ const createPeerConnection = (token) => {
             token: callToken,
             type: 'description',
             sdp: peerConnection.localDescription,
+            toParty: fromParty,
           })
         );
       }
@@ -383,7 +389,10 @@ const createPeerConnection = (token) => {
     }
   };
 
-  peerConnection.ontrack = function (event) {
+  peerConnection.addEventListener('track', (event) =>
+    receiveTrack(event, fromParty)
+  );
+  const receiveTrack = (event, fromParty) => {
     // console.log('ontrack called. The event is:');
     // console.log(event);
     const track = event.track;
@@ -391,19 +400,21 @@ const createPeerConnection = (token) => {
     console.log(type);
 
     let remoteVideoCreated = allMediaStreams.find(
-      (stream) => stream.videoId === 'remote_video'
+      (stream) =>
+        stream.videoId === 'remote_video' && stream.fromParty === fromParty
     );
     let videoShare = allMediaStreams.find(
       (stream) => stream.videoId === 'video_share'
     );
     if (!remoteVideoCreated) {
       // Create remote video from peer
-      remoteVideoCreated = createVideo('remote_video', event);
+      remoteVideoCreated = createVideo('remote_video', event, fromParty);
 
       // Save mediaStream from remote
       allMediaStreams.push({
         mediaStream: remoteVideoCreated,
         videoId: 'remote_video',
+        fromParty,
       });
 
       // Enable hangup button
@@ -429,6 +440,7 @@ const createPeerConnection = (token) => {
 
       // Remote video has additional streams to add
     } else if (remoteVideoCreated.mediaStream.id === event.streams[0].id) {
+      // TODO
       document.querySelector('#remote_video').srcObject = event.streams[0];
 
       // If on track is not from remote video camera it should be from a video
@@ -527,7 +539,7 @@ const createPeerConnection = (token) => {
     },
     false
   );
-  return peerConnection;
+  return pc;
 };
 
 /* ///////////////////////////////////////////////////////
@@ -539,6 +551,7 @@ const createPeerConnection = (token) => {
 // handle signals as a caller
 const callerSignalling = (event) => {
   const signal = JSON.parse(event.data);
+  console.log(signal.fromParty && signal.fromParty);
   if (signal.type === 'caller_arrived') {
     console.log('caller_arrived');
     // Server asks this instance to be Callee Leg
@@ -549,7 +562,7 @@ const callerSignalling = (event) => {
     document.title = 'Callee Leg';
   } else if (signal.type === 'callee_arrived') {
     document.title = 'Caller Leg';
-    const peerConnection = createPeerConnection(signal.token);
+    const { peerConnection, fromParty } = createPeerConnection(signal);
     setDataChannel(peerConnection);
 
     // add camera and mic stream to pc
@@ -584,6 +597,7 @@ const callerSignalling = (event) => {
             token: callToken,
             type: 'description',
             sdp: peerConnection.localDescription,
+            toParty: fromParty,
           })
         );
       })
@@ -593,7 +607,7 @@ const callerSignalling = (event) => {
   } else if (signal.type === 'ice-candidate') {
     console.log('New ice-candidate message received.');
     const { peerConnection } = connection.find(
-      (pc) => pc.token === signal.token
+      (pc) => pc.token === signal.token && pc.fromParty === signal.fromParty
     );
     // if remoteDescription not set, queue iceCandidate
     if (peerConnection && peerConnection.remoteDescription) {
@@ -606,8 +620,8 @@ const callerSignalling = (event) => {
       });
     }
   } else if (signal.type === 'description') {
-    const { peerConnection, iceCandidates } = connection.find(
-      (pc) => pc.token === signal.token
+    const { peerConnection, iceCandidates, fromParty } = connection.find(
+      (pc) => pc.token === signal.token && pc.fromParty === signal.fromParty
     );
     console.log(
       `New description message received. Set remote description. Type is ${signal.sdp.type}`
@@ -631,6 +645,7 @@ const callerSignalling = (event) => {
           console.log(error);
         });
     } else {
+      console.log('PASSED here for OFFER?!');
       peerConnection
         .setRemoteDescription(signal.sdp)
         .then(function () {
@@ -657,6 +672,7 @@ const callerSignalling = (event) => {
               token: callToken,
               type: 'description',
               sdp: peerConnection.localDescription,
+              toParty: fromParty,
             })
           );
         })
@@ -669,7 +685,7 @@ const callerSignalling = (event) => {
       (pc) => pc.token === signal.token
     );
     console.log('Received hang up notification from other peer');
-    hangupReceivedByCaller(signal.token);
+    hangupReceivedByCaller(signal);
   } else if (signal.type === 'hard-reset') {
     socket.close();
     toast({
@@ -693,20 +709,19 @@ const callerSignalling = (event) => {
 
 const calleeSignalling = (event) => {
   const signal = JSON.parse(event.data);
-  let peerConnection;
-  const pc = connection.find((pc) => pc.token === signal.token);
-  if (!pc) {
-    peerConnection = createPeerConnection(signal.token);
-    // Set listeners for data channel
-    peerConnection.ondatachannel = onDataChannel;
+  console.log(signal.fromParty && signal.fromParty);
+  if (signal.type === 'party_arrived') {
+    const { peerConnection, fromParty } = createPeerConnection(signal);
+    setDataChannel(peerConnection);
+
     // add camera and mic stream to pc
     const { mediaStream } = allMediaStreams.find(
       (stream) => stream.videoId === 'local_video'
     );
-    // add mediaStream to pc
     mediaStream
       .getTracks()
       .forEach((track) => peerConnection.addTrack(track, mediaStream));
+
     // if video is in mute send canvas instead
     if (noVideoCall) {
       const canvasStream = allMediaStreams.find(
@@ -717,151 +732,223 @@ const calleeSignalling = (event) => {
         .find((sender) => sender.track.kind === 'video')
         .replaceTrack(canvasStream.mediaStream.getVideoTracks()[0]);
     }
-  } else {
-    peerConnection = pc.peerConnection;
-  }
-  if (signal.type === 'ice-candidate') {
-    console.log('New Ice Candidate message received.');
-    // if remoteDescription not set, queue iceCandidate
-    if (peerConnection && peerConnection.remoteDescription) {
-      peerConnection.addIceCandidate(new RTCIceCandidate(signal.candidate));
-    } else {
-      connection.map((pc) => {
-        if (pc.token === signal.token) {
-          pc.iceCandidates.push(signal.candidate);
-        }
+
+    peerConnection
+      .createOffer()
+      .then(function (offer) {
+        console.log('Offer created. Set local Description');
+        return peerConnection.setLocalDescription(offer);
+      })
+      .then(function () {
+        console.log('Description created. Sent to peer.');
+        socket.send(
+          JSON.stringify({
+            token: callToken,
+            type: 'description',
+            sdp: peerConnection.localDescription,
+            toParty: fromParty,
+          })
+        );
+      })
+      .catch(function (error) {
+        console.log(error);
       });
-    }
-  } else if (signal.type === 'description') {
-    const { iceCandidates } = connection.find(
-      (pc) => pc.token === signal.token
-    );
-    console.log(
-      `New description message received. Set remote description. Type is ${signal.sdp.type}`
-    );
-    if (signal.sdp.type === 'offer') {
-      peerConnection
-        .setRemoteDescription(signal.sdp)
-        .then(function () {
-          console.log('Remote Session Description set. Creating answer');
-          // read iceCandidates in queue and apply to pc
-          iceCandidates.forEach((candidate) =>
-            peerConnection.addIceCandidate(new RTCIceCandidate(candidate))
-          );
-          connection.forEach((pc) => {
-            if (pc.token === signal.token) {
-              pc.iceCandidates = [];
-            }
-          });
-          return peerConnection.createAnswer();
-        })
-        .then(function (answer) {
-          console.log('Answer created. Set local description');
-          return peerConnection.setLocalDescription(answer);
-        })
-        .then(function () {
-          console.log('Local description set. Send description to peer');
-          socket.send(
-            JSON.stringify({
-              token: callToken,
-              type: 'description',
-              sdp: peerConnection.localDescription,
-            })
-          );
-        })
-        .catch(function (error) {
-          console.log(error);
-        });
-    } else {
-      peerConnection
-        .setRemoteDescription(signal.sdp)
-        .then(function () {
-          console.log('Remote Session Description set.');
-          // read iceCandidates in queue and apply to pc
-          iceCandidates.forEach((candidate) =>
-            peerConnection.addIceCandidate(new RTCIceCandidate(candidate))
-          );
-          connection.forEach((pc) => {
-            if (pc.token === signal.token) {
-              pc.iceCandidates = [];
-            }
-          });
-        })
-        .catch(function (error) {
-          console.log(error);
-        });
-    }
-  } else if (signal.type === 'hang-up') {
-    toast({
-      alertClass: 'alert-danger',
-      content: 'Hang-up received',
-      modal: true,
-    });
-    console.log('Received hang up notification from other peer');
-    setTimeout(() => {
-      document.location = `${serverOrigin}`;
-    }, 3200);
-  } else if (signal.type === 'full-bridge') {
-    toast({
-      alertClass: 'alert-danger',
-      content: 'Room is full',
-      modal: true,
-    });
-    setTimeout(() => {
-      document.location = `${serverOrigin}`;
-    }, 3200);
-  } else if (signal.type === 'not-available') {
-    toast({
-      alertClass: 'alert-danger',
-      content: 'The meeting code provided does not exist',
-      modal: true,
-    });
-    setTimeout(() => {
-      document.location = `${serverOrigin}`;
-    }, 3200);
-  } else if (signal.type === 'reset') {
-    toast({
-      alertClass: 'alert-danger',
-      content: 'Meeting reset',
-      modal: true,
-    });
-    socket.close();
-    setTimeout(() => {
-      location.reload();
-    }, 2000);
   } else {
-    console.log(`Non-handled ${signal.type} received`);
+    let peerConnection;
+    let pc = connection.find(
+      (pc) => pc.token === signal.token && pc.fromParty === signal.fromParty
+    );
+    if (!pc) {
+      pc = createPeerConnection(signal);
+      peerConnection = pc.peerConnection;
+      // Set listeners for data channel
+      peerConnection.ondatachannel = onDataChannel;
+      // add camera and mic stream to pc
+      const { mediaStream } = allMediaStreams.find(
+        (stream) => stream.videoId === 'local_video'
+      );
+      // add mediaStream to pc
+      mediaStream
+        .getTracks()
+        .forEach((track) => peerConnection.addTrack(track, mediaStream));
+      // if video is in mute send canvas instead
+      if (noVideoCall) {
+        const canvasStream = allMediaStreams.find(
+          (stream) => stream.videoId === 'canvas'
+        );
+        peerConnection
+          .getSenders()
+          .find((sender) => sender.track.kind === 'video')
+          .replaceTrack(canvasStream.mediaStream.getVideoTracks()[0]);
+      }
+    } else {
+      peerConnection = pc.peerConnection;
+    }
+    if (signal.type === 'ice-candidate') {
+      console.log('New Ice Candidate message received.');
+      // if remoteDescription not set, queue iceCandidate
+      if (peerConnection && peerConnection.remoteDescription) {
+        peerConnection.addIceCandidate(new RTCIceCandidate(signal.candidate));
+      } else {
+        connection.map((pc) => {
+          if (pc.token === signal.token && pc.fromParty === signal.fromParty) {
+            pc.iceCandidates.push(signal.candidate);
+          }
+        });
+      }
+    } else if (signal.type === 'description') {
+      const { iceCandidates } = connection.find(
+        (pc) => pc.token === signal.token && pc.fromParty === signal.fromParty
+      );
+      console.log(
+        `New description message received. Set remote description. Type is ${signal.sdp.type}`
+      );
+      if (signal.sdp.type === 'offer') {
+        peerConnection
+          .setRemoteDescription(signal.sdp)
+          .then(function () {
+            console.log('Remote Session Description set. Creating answer');
+            // read iceCandidates in queue and apply to pc
+            iceCandidates.forEach((candidate) =>
+              peerConnection.addIceCandidate(new RTCIceCandidate(candidate))
+            );
+            connection.forEach((pc) => {
+              if (
+                pc.token === signal.token &&
+                pc.fromParty === signal.fromPary
+              ) {
+                pc.iceCandidates = [];
+              }
+            });
+            return peerConnection.createAnswer();
+          })
+          .then(function (answer) {
+            console.log('Answer created. Set local description');
+            return peerConnection.setLocalDescription(answer);
+          })
+          .then(function () {
+            console.log('Local description set. Send description to peer');
+            socket.send(
+              JSON.stringify({
+                token: callToken,
+                type: 'description',
+                sdp: peerConnection.localDescription,
+                toParty: pc.fromParty,
+              })
+            );
+            console.log(pc.fromParty);
+          })
+          .catch(function (error) {
+            console.log(error);
+          });
+      } else {
+        peerConnection
+          .setRemoteDescription(signal.sdp)
+          .then(function () {
+            console.log('Remote Session Description set.');
+            // read iceCandidates in queue and apply to pc
+            iceCandidates.forEach((candidate) =>
+              peerConnection.addIceCandidate(new RTCIceCandidate(candidate))
+            );
+            connection.forEach((pc) => {
+              if (
+                pc.token === signal.token &&
+                pc.fromParty === signal.fromParty
+              ) {
+                pc.iceCandidates = [];
+              }
+            });
+          })
+          .catch(function (error) {
+            console.log(error);
+          });
+      }
+    } else if (signal.type === 'hang-up') {
+      // TODO - implement owner vs another party
+      toast({
+        alertClass: 'alert-danger',
+        content: 'Hang-up received',
+        modal: true,
+      });
+      console.log('Received hang up notification from other peer');
+      setTimeout(() => {
+        document.location = `${serverOrigin}`;
+      }, 3200);
+    } else if (signal.type === 'full-bridge') {
+      toast({
+        alertClass: 'alert-danger',
+        content: 'Room is full',
+        modal: true,
+      });
+      setTimeout(() => {
+        document.location = `${serverOrigin}`;
+      }, 3200);
+    } else if (signal.type === 'not-available') {
+      toast({
+        alertClass: 'alert-danger',
+        content: 'The meeting code provided does not exist',
+        modal: true,
+      });
+      setTimeout(() => {
+        document.location = `${serverOrigin}`;
+      }, 3200);
+    } else if (signal.type === 'reset') {
+      toast({
+        alertClass: 'alert-danger',
+        content: 'Meeting reset',
+        modal: true,
+      });
+      socket.close();
+      setTimeout(() => {
+        location.reload();
+      }, 2000);
+    } else {
+      console.log(`Non-handled ${signal.type} received`);
+    }
   }
 };
 
-const hangupReceivedByCaller = (token) => {
-  const remoteVideoElement = document.getElementById('remote_video');
-  const remoteVideoContainer = document.querySelector('.remoteVideoContainer');
-  const videoContainer = document.querySelector('#videoContainer');
-
+const hangupReceivedByCaller = ({ token, fromParty }) => {
   allMediaStreams = allMediaStreams.filter(
-    (mediaStream) => mediaStream.videoId !== 'remote_video'
+    (mediaStream) =>
+      mediaStream.videoId !== 'remote_video' ||
+      (mediaStream.videoId === 'remote_video' &&
+        mediaStream.fromParty !== fromParty)
   );
-  const { peerConnection } = connection.find((pc) => pc.token === token);
+  const { peerConnection, pos } = connection.find(
+    (pc) => pc.token === token && pc.fromParty === fromParty
+  );
+  // return the position placement to the array of positions
+  position.unshift(pos);
+  // close the pc
   peerConnection.close();
   callState.className = 'closed-state';
+  // remove pc from the array of pcs
   connection = connection.filter((pc) => pc.token !== token);
-  if (remoteVideoElement && remoteVideoElement.srcObject) {
-    remoteVideoElement.pause();
-    remoteVideoElement.srcObject.getTracks().forEach((track) => track.stop());
-    remoteVideoElement.removeAttribute('src');
-    remoteVideoElement.load();
-    // remove the video element
-    for (const child of remoteVideoContainer.children) {
-      child.remove();
-    }
-    // remove the div element
-    for (const child of videoContainer.children) {
-      if (child.classList.contains('remoteVideoContainer')) {
+  // remove the video element
+  const remoteVideoContainer = document.querySelector(`.${pos}`);
+  console.log(pos);
+  console.log(remoteVideoContainer);
+  for (const child of remoteVideoContainer.children) {
+    if (child.classList.contains('remote_video')) {
+      if (child && child.srcObject) {
+        child.pause();
+        child.srcObject.getTracks().forEach((track) => track.stop());
+        child.removeAttribute('src');
+        child.load();
+        // remove the video element
         child.remove();
       }
     }
   }
+  const videoContainer = document.querySelector('#videoContainer');
+  // remove the div element
+  for (const child of videoContainer.children) {
+    if (child.classList.contains('remoteVideoContainer')) {
+      child.remove();
+    }
+  }
+
   hangup.disabled = true;
   shareScreen.disabled = true;
   replaceScreen.disabled = true;
@@ -904,7 +991,7 @@ const hangUpCall = () => {
  * ontrack event.streams[0], to store on allMediaStreams for subsequent ontrack
  * events for the same stream.
  */
-function createVideo(videoid, event) {
+function createVideo(videoid, event, fromParty) {
   // creates a video element
   const vid = document.createElement('video');
   // add the #id for this particular video
@@ -921,7 +1008,16 @@ function createVideo(videoid, event) {
       videoContainer.classList.add('videoContainerChatShare');
     }
   } else {
-    divContainer.className = 'remoteVideoContainer';
+    // assign a position for this video on screen
+    const pos = position.shift();
+    divContainer.className = `remoteVideoContainer ${pos}`;
+    // TODO does it need token, does it need compare the token at all in all
+    // messages received from server?
+    connection.forEach((pc) => {
+      if (pc.fromParty === fromParty) {
+        pc.position = pos;
+      }
+    });
   }
   divContainer.append(vid);
 
@@ -1136,19 +1232,16 @@ const setupCaptureStream = (myVideoStream) => {
   const videoTracks = myVideoStream.getVideoTracks();
 
   // Add tracks
-  let senderSharedVideo = [];
   connection.forEach((pc) => {
-    const { peerConnection } = pc;
+    const { peerConnection, sendersSharedVideo } = pc;
     myVideoStream.getTracks().forEach((track) => {
-      senderSharedVideo.push(peerConnection.addTrack(track, myVideoStream));
+      sendersSharedVideo.push(peerConnection.addTrack(track, myVideoStream));
     });
   });
 
-  console.log(senderSharedVideo);
-  // store media stream object in peer connection
+  // store media stream object
   allMediaStreams.push({
     mediaStream: myVideoStream,
-    senders: senderSharedVideo,
     videoId: 'myVideo',
   });
 
@@ -1170,14 +1263,15 @@ const setupCaptureStream = (myVideoStream) => {
   // MediaStreamTrack.onended.
   // Call Back probably not called.
   videoTracks.onended = function () {
-    for (let i = 0; i < allMediaStreams.length; i++) {
-      if (allMediaStreams[i].videoId === 'myVideo') {
-        allMediaStreams.splice(i, 1);
-      }
-    }
+    console.log('track onended called');
+    allMediaStreams = allMediaStreams.filter(
+      (streamsObj) => streamsObj.videoId !== 'myVideo'
+    );
+
     connection.forEach((pc) => {
-      const { peerConnection } = pc;
-      peerConnection.removeTrack(senderSharedVideo);
+      const { peerConnection, sendersSharedVideo } = pc;
+      sendersSharedVideo.forEach((track) => peerConnection.removeTrack(track));
+      pc.sendersSharedVideo = [];
     });
     shareVideo.disabled = false;
     if (!sharingScreen) {
@@ -1256,18 +1350,19 @@ const stopVideo = () => {
   let videoElement = document.querySelector('#myVideo');
 
   videoElement.removeEventListener('loadeddata', checkSharing);
-  let originalStream = allMediaStreams.find(
+  let myVideoObj = allMediaStreams.find(
     (mediaStream) => mediaStream.videoId === 'myVideo'
   );
 
   // In case the video share did not succeed we remove it
   // but the stream may not be built
-  if (originalStream) {
+  if (myVideoObj) {
     connection.forEach((pc) => {
-      const { peerConnection } = pc;
-      originalStream.senders.forEach((track) => {
+      const { peerConnection, sendersSharedVideo } = pc;
+      sendersSharedVideo.forEach((track) => {
         peerConnection.removeTrack(track);
       });
+      pc.sendersSharedVideo = [];
     });
 
     allMediaStreams = allMediaStreams.filter(

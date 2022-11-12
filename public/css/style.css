@@ -696,7 +696,7 @@ Video
 }
 
 .remoteVideoContainer {
-  grid-area: rv-1;
+  /* grid-area: rv-1; */
   width: 214px;
   height: 160px;
   border: 5px solid var(--grey-700);
@@ -711,6 +711,16 @@ Video
     margin: 0.4rem;
   }
 }
+.rv01 {
+  grid-area: 'rv-1';
+}
+.rv02 {
+  grid-area: 'rv-2';
+}
+.rv03 {
+  grid-area: 'rv-3';
+}
+
 .sharedVideoContainer {
   grid-area: sh-1;
   width: 100%;

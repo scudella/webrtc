@@ -1,0 +1,18 @@
+export const position = [
+  'rv01',
+  'rv02',
+  'rv03',
+  'rv04',
+  'rv05',
+  'rv06',
+  'rv07',
+  'rv08',
+  'rv09',
+  'rv10',
+  'rv11',
+  'rv12',
+  'rv13',
+  'rv14',
+  'rv15',
+  'rv16',
+];

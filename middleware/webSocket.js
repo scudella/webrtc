@@ -105,31 +105,38 @@ const callSetup = async (leg, message) => {
                   // enter the room as owner
                   bridgeAddLeg(token, connection.id, 'owner');
                   // send to the owner the message callee arrived
-                  webrtcClients[connection.id].connection.send(
-                    JSON.stringify({
-                      token,
-                      type: 'callee_arrived',
-                    }),
-                    logError
-                  );
-                  logComment(
-                    `callee_arrived sent to an owner ${connection.id} at room ${token}`
-                  );
+                  // from all parties already in the room
+                  bridge.forEach((mate) => {
+                    if (mate[0] !== connection.id) {
+                      webrtcClients[connection.id].connection.send(
+                        JSON.stringify({
+                          token,
+                          type: 'callee_arrived',
+                          fromParty: mate[0],
+                        }),
+                        logError
+                      );
+                      logComment(
+                        `callee_arrived ${mate[0]} sent to an owner ${connection.id} at room ${token}`
+                      );
+                    }
+                  });
                 } else {
                   // other party is owner
 
-                  // send message to the other party:  callee arrived
+                  // send message to the other party: callee arrived
                   // get other party connection id
 
                   webrtcClients[owner[0]].connection.send(
                     JSON.stringify({
                       token,
                       type: 'callee_arrived',
+                      fromParty: connection.id,
                     }),
                     () => notConnected(owner[0], token, connection.id)
                   );
                   logComment(
-                    `callee_arrived sent to first owner ${owner[0]} at room ${token}`
+                    `callee_arrived ${connection.id} sent to first owner ${owner[0]} at room ${token}`
                   );
                   // send message to the owner that became callee
                   // the caller arrived
@@ -140,6 +147,22 @@ const callSetup = async (leg, message) => {
                     }),
                     logError
                   );
+                  // send to everybody else mate arrived
+                  bridge.forEach((mate) => {
+                    if (mate[0] !== owner[0]) {
+                      webrtcClients[mate[0]].connection.send(
+                        JSON.stringify({
+                          token,
+                          type: 'party_arrived',
+                          fromParty: connection.id,
+                        }),
+                        logError
+                      );
+                      logComment(
+                        `party_arrived ${connnection.id} sent to a callee ${connection.id} at room ${token}`
+                      );
+                    }
+                  });
                   logComment(
                     `caller_arrived sent to second owner ${connection.id} at room ${token}`
                   );
@@ -163,7 +186,47 @@ const callSetup = async (leg, message) => {
             } else {
               // there is at least a party already in the room
               const bridge = Object.entries(webrtcRooms[token]);
-              if (bridge.length === capacity) {
+
+              const ownerInBridge = Object.values(webrtcRooms[token]).find(
+                (role) => role === 'owner'
+              );
+              // callees may enter the bridge leaving one leg left to the owner. If owner in bridge, callees can get remaining seats.
+              if (
+                bridge.length < capacity - 1 ||
+                (bridge.length < capacity && ownerInBridge)
+              ) {
+                // send to the owner the message callee arrived
+                // and to everybody else party arrived
+                bridge.forEach((mate) => {
+                  if (mate[1] === 'owner') {
+                    webrtcClients[mate[0]].connection.send(
+                      JSON.stringify({
+                        token,
+                        type: 'callee_arrived',
+                        fromParty: connection.id,
+                      }),
+                      logError
+                    );
+                    logComment(
+                      `callee_arrived ${connection.id} sent to owner ${mate[0]} when callee arrives at ${token}`
+                    );
+                  } else {
+                    webrtcClients[mate[0]].connection.send(
+                      JSON.stringify({
+                        token,
+                        type: 'party_arrived',
+                        fromParty: connection.id,
+                      }),
+                      logError
+                    );
+                    logComment(
+                      `party_arrived ${connection.id} sent to party ${mate[0]} when callee arrives at ${token}`
+                    );
+                  }
+                });
+                // enter the room as callee
+                bridgeAddLeg(token, connection.id, 'callee');
+              } else {
                 // the room is full
                 // send a message back
                 webrtcClients[connection.id].connection.send(
@@ -178,32 +241,6 @@ const callSetup = async (leg, message) => {
                     user ? user.userId : 'anonymous'
                   } at room ${token}`
                 );
-              } else {
-                const ownerInBridge = Object.values(webrtcRooms[token]).find(
-                  (role) => role === 'owner'
-                );
-                // callees may enter the bridge leaving one leg left to the owner. If owner in bridge, callees can get remaining seats.
-                if (
-                  bridge.length < capacity - 1 ||
-                  (bridge.length < capacity && ownerInBridge)
-                ) {
-                  // enter the room as callee
-                  bridgeAddLeg(token, connection.id, 'callee');
-                  // send to the owner the message callee arrived
-                  const owner = bridge.find((mate) => mate[1] === 'owner');
-                  if (owner) {
-                    webrtcClients[owner[0]].connection.send(
-                      JSON.stringify({
-                        token,
-                        type: 'callee_arrived',
-                      }),
-                      logError
-                    );
-                    logComment(
-                      `callee_arrived sent to owner ${owner[0]} when callee arrives at ${token}`
-                    );
-                  }
-                }
               }
             }
           } else {
@@ -239,6 +276,7 @@ const callSetup = async (leg, message) => {
                     const bridge = Object.entries(webrtcRooms[token]);
                     bridge.forEach((id) => {
                       if (id[0] === connection.id) {
+                        // remove party from the bridge
                         if (id[1] === 'owner') {
                           partyIsOwner = true;
                         }
@@ -250,6 +288,7 @@ const callSetup = async (leg, message) => {
                             connection.id
                           ].rooms.filter((room) => room !== token);
                           if (!newList.length) {
+                            // no rooms left, remove the client
                             delete webrtcClients[connection.id];
                             connection.close('1000');
                           } else {
@@ -278,6 +317,7 @@ const callSetup = async (leg, message) => {
                         return;
                       }
                     } else {
+                      // room not empty
                       // check whether the owner has left
                       if (partyIsOwner) {
                         // the owner has left the room
@@ -288,6 +328,7 @@ const callSetup = async (leg, message) => {
                               JSON.stringify({
                                 token,
                                 type: 'hang-up',
+                                fromParty: 'owner',
                               }),
                               logError
                             );
@@ -334,30 +375,32 @@ const callSetup = async (leg, message) => {
                         }
                       } else {
                         // owner still on the call, send hang-up to
-                        // signal the other leg has left
-                        // owner will remain in the bridge
-                        const ownerParty = Object.entries(
-                          webrtcRooms[token]
-                        ).find((party) => party[1] === 'owner');
-                        webrtcClients[ownerParty[0]].connection.send(
-                          JSON.stringify({
-                            token,
-                            type: 'hang-up',
-                          }),
-                          logError
-                        );
-                        logComment(
-                          `hang-up sent to owner as someone has left room ${token}`
-                        );
+                        // signal a party has left. Owner and other
+                        // participants will remain in the bridge
+                        Object.keys(webrtcRooms[token]).forEach((party) => {
+                          webrtcClients[party].connection.send(
+                            JSON.stringify({
+                              token,
+                              type: 'hang-up',
+                              fromParty: connection.id,
+                            }),
+                            logError
+                          );
+                          logComment(
+                            `hang-up sent to leg ${party} as party ${connection.id} has left room ${token}`
+                          );
+                        });
                       }
                     }
                   } else {
-                    // then broadcast the message to everybody else
+                    // then send the message to the destination
                     Object.keys(webrtcRooms[token]).forEach((id) => {
-                      if (id != connection.id) {
+                      if (id != connection.id && id === signal.toParty) {
                         try {
+                          // add connection.id to the message
+                          signal.fromParty = connection.id;
                           webrtcClients[id].connection.send(
-                            message.utf8Data,
+                            JSON.stringify(signal),
                             logError
                           );
                         } catch (error) {
@@ -465,6 +508,7 @@ const connectionClosed = (connection, evt) => {
                 JSON.stringify({
                   token,
                   type: 'hang-up',
+                  fromParty: 'owner',
                 }),
                 logError
               );
