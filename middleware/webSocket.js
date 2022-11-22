@@ -159,7 +159,7 @@ const callSetup = async (leg, message) => {
                         logError
                       );
                       logComment(
-                        `party_arrived ${connnection.id} sent to a callee ${connection.id} at room ${token}`
+                        `party_arrived ${connection.id} sent to a callee ${connection.id} at room ${token}`
                       );
                     }
                   });

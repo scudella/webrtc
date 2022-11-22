@@ -170,8 +170,6 @@ const toggleCanvasChat = () => {
 function setDataChannel(peerConnection) {
   // sets the label for the data channel
   dataChannel = peerConnection.createDataChannel('chat');
-  console.log('data channel created ');
-  console.log(dataChannel);
 
   // set call back for the channel opened
   dataChannel.onopen = function () {

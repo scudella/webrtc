@@ -720,6 +720,45 @@ Video
 .rv03 {
   grid-area: 'rv-3';
 }
+.rv04 {
+  grid-area: 'rv-4';
+}
+.rv05 {
+  grid-area: 'rv-5';
+}
+.rv06 {
+  grid-area: 'rv-6';
+}
+.rv07 {
+  grid-area: 'rv-7';
+}
+.rv08 {
+  grid-area: 'rv-8';
+}
+.rv09 {
+  grid-area: 'rv-9';
+}
+.rv10 {
+  grid-area: 'rv-10';
+}
+.rv11 {
+  grid-area: 'rv-11';
+}
+.rv12 {
+  grid-area: 'rv-12';
+}
+.rv13 {
+  grid-area: 'rv-13';
+}
+.rv14 {
+  grid-area: 'rv-14';
+}
+.rv15 {
+  grid-area: 'rv-15';
+}
+.rv16 {
+  grid-area: 'rv-16';
+}
 
 .sharedVideoContainer {
   grid-area: sh-1;
@@ -758,6 +797,27 @@ Video
 .frontVideo {
   z-index: 7;
 }
+.new-state {
+  border-color: var(--white);
+}
+.checking-state {
+  border-color: blue;
+}
+.connected-state {
+  border-color: var(--grey-700);
+}
+.completed-state {
+  border-color: green;
+}
+.closed-state {
+  border-color: honeydew;
+}
+.failed-state {
+  border-color: red;
+}
+.disconnected-state {
+  border-color: orange;
+}
 
 /*
 =============== 
@@ -786,7 +846,7 @@ Footer SVG Buttons
 .buttonsSvg {
   height: 100%;
   display: grid;
-  grid-template-columns: 1fr 1fr 1fr 0.5fr;
+  grid-template-columns: 1fr 1fr 1fr;
   max-width: 25rem;
   background: transparent;
   place-items: center;
@@ -839,38 +899,6 @@ Footer SVG Buttons
 #hangup:enabled:hover {
   -webkit-transform: scale(1.1275);
   transform: scale(1.1275);
-}
-#call-state {
-  border: 0px solid black;
-  border-radius: 50%;
-  border: transparent;
-  padding: 0;
-  height: 1.4rem;
-  width: 1.4rem;
-  font-size: 1.4rem;
-  align-self: center;
-  line-height: 1rem;
-}
-.new-state {
-  background-color: aqua;
-}
-.checking-state {
-  background-color: blue;
-}
-.connected-state {
-  background-color: green;
-}
-.completed-state {
-  background-color: grey;
-}
-.closed-state {
-  background-color: honeydew;
-}
-.failed-state {
-  background-color: red;
-}
-.disconnected-state {
-  background-color: lightgreen;
 }
 
 /*

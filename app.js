@@ -53,7 +53,7 @@ app.use(helmet());
 app.use(cors());
 app.use(xss());
 
-app.use(morgan('tiny'));
+// app.use(morgan('tiny'));
 
 // go through all middleware
 app.use(express.json());
