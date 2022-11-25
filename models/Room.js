@@ -12,7 +12,7 @@ const RoomSchema = new mongoose.Schema(
     },
     capacity: {
       type: Number,
-      default: 2,
+      default: 5,
       max: 10,
     },
     sfu: {
@@ -21,6 +21,12 @@ const RoomSchema = new mongoose.Schema(
     },
     ip: { type: String, required: true },
     userAgent: { type: String, required: true },
+    loginRequired: {
+      type: Boolean,
+      default: false,
+    },
+    sameDomain: { type: Boolean, default: false },
+    ownerRequired: { type: Boolean, default: true },
     user: {
       type: mongoose.Types.ObjectId,
       Ref: 'User',

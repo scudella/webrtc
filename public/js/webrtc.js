@@ -752,7 +752,17 @@ const callerSignalling = (event) => {
 
 const calleeSignalling = (event) => {
   const signal = JSON.parse(event.data);
-  if (signal.type === 'party_arrived') {
+  if (signal.type === 'waiting-room') {
+    setTimeout(() => {
+      // send join message to the bridge
+      socket.send(
+        JSON.stringify({
+          token: callToken,
+          type: 'join',
+        })
+      );
+    }, 15000);
+  } else if (signal.type === 'party_arrived') {
     const pc = createPeerConnection(signal);
     const { peerConnection, fromParty } = pc;
     setDataChannel(pc);
@@ -1038,11 +1048,11 @@ const hangUpCall = () => {
   if (partySide === 'caller') {
     setTimeout(() => {
       document.location = `${serverOrigin}/meeting/`;
-    }, 300);
+    }, 2000);
   } else {
     setTimeout(() => {
       document.location = `${serverOrigin}`;
-    }, 300);
+    }, 2000);
   }
 };
 

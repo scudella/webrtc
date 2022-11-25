@@ -147,6 +147,11 @@ window.onload = async function init() {
     tokenGen.disabled = false;
     urlField.disabled = true;
     create = true;
+    if (room) {
+      inputCode.value = room;
+      urlField.value = `${document.location.origin}/app/#${inputCode.value}`;
+      callToken = inputCode.value;
+    }
   };
   const formJoin = () => {
     btnJoin.disabled = true;

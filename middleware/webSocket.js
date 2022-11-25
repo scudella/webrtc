@@ -43,8 +43,6 @@ const signalRequest = async (req) => {
 const callSetup = async (leg, message) => {
   const { connection, user } = leg;
   if (message.type === 'utf8') {
-    logComment(`got message ${message.utf8Data}`);
-
     let signal = undefined;
     try {
       signal = JSON.parse(message.utf8Data);
@@ -65,11 +63,15 @@ const callSetup = async (leg, message) => {
         return;
       }
       if (room) {
-        const { name, capacity, sfu } = room;
+        const { name, capacity, sfu, ownerRequired } = room;
         if (!sfu) {
           // 2-way pxp setup
+          logComment(`got message ${message.utf8Data}`);
+
           logComment(
-            `user ${user ? user.userId : 'anonymous'} accessing room ${name}`
+            `from user ${user ? user.userId : 'anonymous'}, leg ${
+              connection.id
+            }`
           );
           if (
             type === 'join' &&
@@ -179,10 +181,20 @@ const callSetup = async (leg, message) => {
             //***************************************** */
             if (webrtcRooms[token] === undefined) {
               // first to join
+              if (!ownerRequired) {
+                bridgeCreate(token);
 
-              bridgeCreate(token);
-
-              bridgeAddLeg(token, connection.id, 'callee');
+                bridgeAddLeg(token, connection.id, 'callee');
+              } else {
+                // Ask callee to wait for the owner arrival
+                webrtcClients[connection.id].connection.send(
+                  JSON.stringify({
+                    token,
+                    type: 'waiting-room',
+                  }),
+                  logError
+                );
+              }
             } else {
               // there is at least a party already in the room
               const bridge = Object.entries(webrtcRooms[token]);
@@ -254,7 +266,7 @@ const callSetup = async (leg, message) => {
               // bridge should exist at this point
               // drop the connection
               connection.close('1002');
-              logError(
+              logComment(
                 `message ${message.utf8Data} received without a bridge from ${connection.remoteAddress}`
               );
               return;
