@@ -268,54 +268,20 @@ const callSetup = async (leg, message) => {
                 if (
                   type === 'ice-candidate' ||
                   type === 'description' ||
-                  type === 'hang-up'
+                  type === 'hang-up' ||
+                  type === 'pcDisconnect'
                 ) {
                   // Let's intercept hang-up to do some clean-up.
                   if (type === 'hang-up') {
-                    let partyIsOwner = false;
-                    const bridge = Object.entries(webrtcRooms[token]);
-                    bridge.forEach((id) => {
-                      if (id[0] === connection.id) {
-                        // remove party from the bridge
-                        if (id[1] === 'owner') {
-                          partyIsOwner = true;
-                        }
-                        try {
-                          delete webrtcRooms[token][connection.id];
-                          logComment(`leg ${connection.id} hanged up`);
-                          // remove room from the list
-                          const newList = webrtcClients[
-                            connection.id
-                          ].rooms.filter((room) => room !== token);
-                          if (!newList.length) {
-                            // no rooms left, remove the client
-                            delete webrtcClients[connection.id];
-                            connection.close('1000');
-                          } else {
-                            webrtcClients[connection.id].rooms = newList;
-                          }
-                        } catch (error) {
-                          logError(error);
-                          logError(
-                            `error deleting bridge ${token} party ${connection.id}`
-                          );
-                        }
-                      }
+                    const partyIsOwner = bridgeDeleteLeg({
+                      token,
+                      party: connection.id,
+                      reason: 'hanged up',
                     });
                     // if room is empty or without an owner, delete the room
                     if (!Object.values(webrtcRooms[token]).length) {
                       // room empty
-                      try {
-                        delete webrtcRooms[token];
-                        logComment(`room ${token} deleted`);
-                        return;
-                      } catch (error) {
-                        logError(error);
-                        logError(
-                          `error deleting bridge ${token} when room empty`
-                        );
-                        return;
-                      }
+                      deleteBridge(token, 'when room empty');
                     } else {
                       // room not empty
                       // check whether the owner has left
@@ -340,39 +306,10 @@ const callSetup = async (leg, message) => {
                               `error sending hang-up to the remaining mates of room ${token}`
                             );
                           }
-
-                          // remove room from the callee list
-                          const newList = webrtcClients[id].rooms.filter(
-                            (item) => item !== token
-                          );
-                          // if room list is empty, close the callee connection
-                          if (!newList.length) {
-                            // close connection;
-                            try {
-                              connection.close('1000');
-                              delete webrtcClients[id];
-                            } catch (error) {
-                              logError(error);
-                              logError(
-                                `error deleting callee connection and client ${id}`
-                              );
-                              return;
-                            }
-                          } else {
-                            webrtcClients[connection.id].rooms = newList;
-                          }
+                          removeRoomFromList({ token, id });
                         });
                         // delete bridge after droping all
-                        try {
-                          delete webrtcRooms[token];
-                          logComment(`room ${token} deleted`);
-                        } catch (error) {
-                          logError(error);
-                          logError(
-                            `error deleting bridge ${token} after dropping all`
-                          );
-                          return;
-                        }
+                        deleteBridge(token, 'after dropping all');
                       } else {
                         // owner still on the call, send hang-up to
                         // signal a party has left. Owner and other
@@ -392,6 +329,13 @@ const callSetup = async (leg, message) => {
                         });
                       }
                     }
+                  } else if (type === 'pcDisconnect') {
+                    const { toParty } = signal;
+                    bridgeDeleteLeg({
+                      token,
+                      party: toParty,
+                      reason: 'disconnect by owner',
+                    });
                   } else {
                     // then send the message to the destination
                     Object.keys(webrtcRooms[token]).forEach((id) => {
@@ -477,25 +421,12 @@ const connectionClosed = (connection, evt) => {
       if (webrtcRooms[token] !== undefined) {
         Object.keys(webrtcRooms[token]).forEach((id) => {
           if (id === connection.id) {
-            try {
-              delete webrtcRooms[token][id];
-            } catch (error) {
-              logError(error);
-              logError(`error deleting bridge ${token} party ${connection.id}`);
-            }
+            deleteBridge(token, `party ${connection.id}`);
           }
         });
         // if room is empty or without an owner, delete the room
         if (!Object.values(webrtcRooms[token]).length) {
-          try {
-            delete webrtcRooms[token];
-            logComment$`room ${token} deleted`;
-            return;
-          } catch (error) {
-            logError(error);
-            logError(`error deleting bridge ${token} when room empty`);
-            return;
-          }
+          deleteBridge(token, 'when room empty');
         } else {
           const newRoom = Object.values(webrtcClients[token]).find(
             (id) => id === 'owner'
@@ -515,32 +446,10 @@ const connectionClosed = (connection, evt) => {
               logComment(
                 `hang-up sent to callee as the owner left room ${token}`
               );
-              // remove room from the callee list
-              const newList = webrtcClients[id].room.filter(
-                (item) => item !== token
-              );
-              // if room list is empty, delete the callee connection
-              if (!newList.length) {
-                // close connection;
-                try {
-                  connection.close('1000');
-                  delete webrtcClients[id];
-                } catch (error) {
-                  logError(error);
-                  logError(`error deleting callee connection and client ${id}`);
-                  return;
-                }
-              }
+              removeRoomFromList({ token, id });
             });
             // delete bridge after droping all
-            try {
-              delete webrtcRooms[token];
-              logComment(`room ${token} deleted`);
-            } catch (error) {
-              logError(error);
-              logError(`error deleting bridge ${token} after dropping all`);
-              return;
-            }
+            deleteBridge(token, 'after dropping all');
           }
         }
       }
@@ -590,12 +499,7 @@ const bridgeReset = (token) => {
       webrtcClients[id].rooms = newList;
     }
   });
-  try {
-    delete webrtcRooms[token];
-    logComment(`bridge reset complete for room ${token}`);
-  } catch (error) {
-    logError(`error deleting bridge ${token}`);
-  }
+  deleteBridge(token, 'at bridge reset');
 };
 
 const bridgeCreate = (token) => {
@@ -627,6 +531,39 @@ const bridgeAddLeg = (token, id, legRole) => {
   }
 };
 
+const bridgeDeleteLeg = ({ token, party, reason }) => {
+  let partyIsOwner = false;
+  const bridge = Object.entries(webrtcRooms[token]);
+  bridge.forEach((mate) => {
+    if (mate[0] === party) {
+      if (mate[1] === 'owner') {
+        partyIsOwner = true;
+      }
+      // remove party from the bridge
+      try {
+        delete webrtcRooms[token][party];
+        logComment(`leg ${party} ${reason}`);
+        // remove room from the list
+        removeRoomFromList({ token, id: party });
+      } catch (error) {
+        logError(error);
+        logError(`error deleting bridge ${token} party ${party}`);
+      }
+    }
+  });
+  return partyIsOwner;
+};
+
+const deleteBridge = (token, reason) => {
+  try {
+    delete webrtcRooms[token];
+    logComment(`room ${token} deleted`);
+  } catch (error) {
+    logError(error);
+    logError(`error deleting bridge ${token} ${reason}`);
+  }
+};
+
 const notConnected = (firstId, token, secondId) => {
   // if owner had a browser reset it won't be connected
   if (!webrtcClients[firstId].connection.connected) {
@@ -634,6 +571,26 @@ const notConnected = (firstId, token, secondId) => {
     bridgeAddLeg(token, secondId, 'owner');
     delete webrtcRooms[token][firstId];
     delete webrtcClients[firstId];
+    logComment(`${firstId} is gone, making ${secondId} the owner`);
+  }
+};
+
+const removeRoomFromList = ({ token, id }) => {
+  const connection = webrtcClients[id].connection;
+  // remove room from the list
+  const newList = webrtcClients[id].rooms.filter((item) => item !== token);
+  // if room list is empty, close the connection
+  if (!newList.length) {
+    // close connection;
+    try {
+      connection.close('1000');
+      delete webrtcClients[id];
+    } catch (error) {
+      logError(error);
+      logError(`error deleting connection and client ${id}`);
+    }
+  } else {
+    webrtcClients[id].rooms = newList;
   }
 };
 

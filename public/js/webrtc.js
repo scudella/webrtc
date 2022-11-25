@@ -500,12 +500,12 @@ const createPeerConnection = ({ token, fromParty }) => {
   peerConnection.addEventListener(
     'iceconnectionstatechange',
     () => {
-      if (pc.callState.currentState) {
-        pc.callState.divContainer.classList.remove(
-          `${pc.callState.currentState}-state`
-        );
-      }
       if (pc.callState.divContainer) {
+        if (pc.callState.currentState) {
+          pc.callState.divContainer.classList.remove(
+            `${pc.callState.currentState}`
+          );
+        }
         pc.callState.divContainer.classList.add(
           `${peerConnection.iceConnectionState}-state`
         );
@@ -549,35 +549,30 @@ const createPeerConnection = ({ token, fromParty }) => {
           break;
         case 'failed':
           console.log('Call failed');
-          toast({
-            alertClass: 'alert-danger',
-            content: 'Call failed',
-            modal: true,
-          });
-          setTimeout(() => {
-            if (partySide === 'caller') {
-              removeRemotePC({ token, fromParty });
-            } else {
-              document.location = `${serverOrigin}`;
-            }
-          }, 3200);
+          removeRemotePC({ token, fromParty });
           break;
         case 'disconnected':
-          // show toast only for last party at callee side
-          if (connection.length === 1 && partySide === 'callee') {
-            toast({
-              alertClass: 'alert-danger',
-              content: 'Peer disconnected',
-              modal: true,
-            });
-            setTimeout(() => {
-              document.location = `${serverOrigin}`;
-            }, 3200);
-          } else {
-            setTimeout(() => {
-              removeRemotePC({ token, fromParty });
-            }, 5000);
-          }
+          let failed = 0;
+          const disconnect = setTimeout(() => {
+            clearInterval(pulling);
+            console.log(`state is ${peerConnection.connectionState}`);
+            if (
+              peerConnection.connectionState === 'disconnected' ||
+              peerConnection.connectionState === 'failed'
+            ) {
+              removeRemotePC({ token, fromParty, pcDisconnect: true });
+            }
+          }, 25000);
+          const pulling = setInterval(() => {
+            if (peerConnection.connectionState === 'failed') {
+              failed++;
+              if (failed === 2) {
+                clearInterval(pulling);
+                clearTimeout(disconnect);
+                removeRemotePC({ token, fromParty, pcDisconnect: true });
+              }
+            }
+          }, 5000);
           break;
       }
     },
@@ -955,7 +950,7 @@ const calleeSignalling = (event) => {
   }
 };
 
-const removeRemotePC = ({ token, fromParty }) => {
+const removeRemotePC = ({ token, fromParty, pcDisconnect }) => {
   allMediaStreams = allMediaStreams.filter(
     (mediaStream) =>
       mediaStream.videoId !== 'remote_video' ||
@@ -1010,6 +1005,15 @@ const removeRemotePC = ({ token, fromParty }) => {
       if (partySide === 'callee') {
         document.location = `${serverOrigin}`;
       }
+    }
+    if (partySide === 'caller' && pcDisconnect) {
+      socket.send(
+        JSON.stringify({
+          token,
+          type: 'pcDisconnect',
+          toParty: fromParty,
+        })
+      );
     }
   }
 };
