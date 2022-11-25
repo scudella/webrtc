@@ -12,12 +12,11 @@ NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF OR IN CONNECTION WITH THE US
 OF THIS SOFTWARE.
 */
 
-import { partySide, callToken } from './webrtc.js';
+import { partySide, callToken, connection } from './webrtc.js';
 let canvas;
 let ctx;
 let messages = [];
 let toggleCanvas = false;
-let dataChannel = null;
 let dbWebRTC = null;
 let queue = [];
 
@@ -39,7 +38,7 @@ const toggleCanvasChat = () => {
     // draw canvas
     toggleCanvas = true;
     // decrease width for videos
-    let videoContainer = document.getElementById('videoContainer');
+    const videoContainer = document.getElementById('videoContainer');
     videoContainer.classList.add('videoContainerChat');
     videoContainer.classList.remove('videoContainerNoChat');
     if (videoContainer.classList.contains('videoContainerNoChatShare')) {
@@ -104,7 +103,7 @@ const toggleCanvasChat = () => {
     sendButtonElement.addEventListener('click', sendMessageChat);
 
     // Create input type range
-    let slider = document.createElement('input');
+    const slider = document.createElement('input');
     slider.id = 'slider';
     slider.setAttribute('type', 'range');
     slider.setAttribute('min', '1');
@@ -134,29 +133,29 @@ const toggleCanvasChat = () => {
     toggleCanvas = false;
 
     // Remove chat containers and elements
-    let chat = document.getElementById('chat');
+    const chat = document.getElementById('chat');
     chat.removeAttribute('height');
     chat.removeAttribute('width');
     chat.remove();
     document.getElementById('message').remove();
 
-    let chatInput = document.getElementById('chatInput');
+    const chatInput = document.getElementById('chatInput');
     chatInput.removeEventListener('input', chatInput);
     chatInput.remove();
 
-    let sendButton = document.getElementById('send');
+    const sendButton = document.getElementById('send');
     sendButton.textContent = '';
     sendButton.removeEventListener('click', sendMessageChat);
     sendButton.remove();
     document.getElementById('inputTextArea').remove();
 
-    let slider = document.getElementById('slider');
+    const slider = document.getElementById('slider');
     slider.removeEventListener('input', slideMessage);
     slider.remove();
     document.getElementById('sliderWrapper').remove();
     document.getElementById('chatContent').remove();
     // increase width for videos
-    let videoContainer = document.getElementById('videoContainer');
+    const videoContainer = document.getElementById('videoContainer');
     videoContainer.classList.add('videoContainerNoChat');
     videoContainer.classList.remove('videoContainerChat');
     if (videoContainer.classList.contains('videoContainerChatShare')) {
@@ -167,26 +166,26 @@ const toggleCanvasChat = () => {
 };
 
 // Set the data channel for the caller side
-function setDataChannel(peerConnection) {
+const setDataChannel = (pc) => {
   // sets the label for the data channel
-  dataChannel = peerConnection.createDataChannel('chat');
+  const dataChannel = pc.peerConnection.createDataChannel('chat');
+  pc.chatDataChannel = dataChannel;
 
   // set call back for the channel opened
   dataChannel.onopen = function () {
+    // set the call back for receiving messages
+    dataChannel.onmessage = receiveMessage;
     console.log('Caller data channel opened');
   };
+};
 
-  // set the call back for receiving messages
-  dataChannel.onmessage = receiveMessage;
-}
-
-function receiveMessage(event) {
+const receiveMessage = (event) => {
   // receive object from the other party
-  let obj = JSON.parse(event.data);
+  const obj = JSON.parse(event.data);
   // save remote login
-  let name = obj.name;
+  const name = obj.name;
   // save the message
-  let msg = obj.message;
+  const msg = obj.message;
 
   // read my login from local storage
   let myUser, myName;
@@ -202,20 +201,12 @@ function receiveMessage(event) {
     );
   }
 
-  let date = new Date();
+  const date = new Date();
 
   // create a new object message with the remote login,
   // the received message, indicating that is not from myself
   // the date, the ws token without the # tag and the caller or callee side
-  let messageR = new Message(
-    name,
-    msg,
-    false,
-    date,
-    // token.slice(1),
-    callToken,
-    partySide
-  );
+  const messageR = new Message(name, msg, false, date, callToken, partySide);
 
   if (!dbWebRTC) {
     // If database not already created, create it, or open it!
@@ -233,16 +224,16 @@ function receiveMessage(event) {
     if (toggleCanvas) {
       printMessage(canvas, ctx, messages, 1);
       // Set slider max attribute
-      let slider = document.getElementById('slider');
-      slider.setAttribute('max', messages.length);
+      document.getElementById('slider').setAttribute('max', messages.length);
     }
   }
-}
+};
 
 // peer_connection call back for ondatachannel on the callee side
-const onDataChannel = (event) => {
+const onDataChannel = (event, pc) => {
   // setting data channel
-  dataChannel = event.channel;
+  const dataChannel = event.channel;
+  pc.chatDataChannel = dataChannel;
   // when channel opens, just send message to the console
   dataChannel.onopen = function () {
     console.log('Data channel opened');
@@ -252,8 +243,8 @@ const onDataChannel = (event) => {
 };
 
 const chatInput = () => {
-  let chatInput = document.querySelector('#chatInput');
-  let send = document.querySelector('#send');
+  const chatInput = document.querySelector('#chatInput');
+  const send = document.querySelector('#send');
   // The text area takes care of the message formatting
   // we just enable or disable the button in case there is
   // any character entered
@@ -265,14 +256,15 @@ const chatInput = () => {
 };
 
 const sendMessageChat = () => {
-  let chatInput = document.querySelector('#chatInput');
+  const chatInput = document.querySelector('#chatInput');
   // Set focus back to the text area
   chatInput.focus();
-  let send = document.querySelector('#send');
+  const send = document.querySelector('#send');
   // get a new date
-  let date = new Date();
+  const date = new Date();
   // if there is no login set, let us use 'local'
   let user, name;
+
   if (localStorage.getItem('user')) {
     user = JSON.parse(localStorage.getItem('user'));
   }
@@ -286,12 +278,11 @@ const sendMessageChat = () => {
   // the ws token without # tag, and the indication of
   // caller or callee. The party side is required when
   // accessing as local host and sharing the same indexed db.
-  let messageL = new Message(
+  const messageL = new Message(
     name,
     chatInput.value,
     true,
     date,
-    // token.slice(1),
     callToken,
     partySide
   );
@@ -303,17 +294,18 @@ const sendMessageChat = () => {
   // with this in the bottom
   printMessage(canvas, ctx, messages, 1);
   // Set slider max attribute
-  let slider = document.getElementById('slider');
-  slider.setAttribute('max', messages.length);
-  // send the message to the other party as an object
+  document.getElementById('slider').setAttribute('max', messages.length);
+  // send the message to the other parties as an object
   // including the login to print in their canvas.
   // Each party put its own date and time.
-  dataChannel.send(
-    JSON.stringify({
-      message: chatInput.value,
-      name,
-    })
-  );
+  connection.forEach((pc) => {
+    pc.chatDataChannel.send(
+      JSON.stringify({
+        message: chatInput.value,
+        name,
+      })
+    );
+  });
   // disable the send button
   send.disabled = true;
   // cleans up the input message
@@ -332,8 +324,8 @@ const printMessage = (canvas, ctx, messages, messagePos) => {
     let currentMessage = messages[i - 1];
 
     // format message to fit the box
-    let formatedMessage = formatMessage(currentMessage.message);
-    let messageHeight = 25 + 15 * formatedMessage.length;
+    const formatedMessage = formatMessage(currentMessage.message);
+    const messageHeight = 25 + 15 * formatedMessage.length;
     //
     // Move y coordinate up for the next message
     y += -10 - messageHeight;
@@ -380,7 +372,7 @@ const printMessage = (canvas, ctx, messages, messagePos) => {
     ctx.fillText(currentMessage.fromName.toString(), x + 5, y);
 
     // format the date according to: last 24hs, last week, or older
-    let dateTime = formatDate(currentMessage.date);
+    const dateTime = formatDate(currentMessage.date);
 
     // Print the date
     ctx.fillText(dateTime, x + 140 - dateTime.length, y);
@@ -394,7 +386,7 @@ const printMessage = (canvas, ctx, messages, messagePos) => {
   }
 };
 
-let roundedRect = function (ctx, x, y, width, height, radius, fill, stroke) {
+const roundedRect = (ctx, x, y, width, height, radius, fill, stroke) => {
   ctx.beginPath();
 
   // draw top and top right corner
@@ -427,7 +419,7 @@ let roundedRect = function (ctx, x, y, width, height, radius, fill, stroke) {
 
 const formatMessage = (message) => {
   // Array for the break lines
-  let messageLines = [];
+  const messageLines = [];
   let lineLength = 30;
   // Mark the initial of the new line
   let charPos = 0;
@@ -504,8 +496,8 @@ const formatMessage = (message) => {
 
 const formatDate = (date) => {
   // Get a new date
-  let now = new Date();
-  let diff = new Date();
+  const now = new Date();
+  const diff = new Date();
 
   // decrease 1 week in miliseconds from today
   diff.setTime(now.getTime() - 6.048e8);
@@ -548,7 +540,7 @@ const createDatabase = (dbName) => {
     return;
   }
   // Open database with version = 1. Use integer valueonly !
-  let request = indexedDB.open(dbName, 1);
+  const request = indexedDB.open(dbName, 1);
 
   request.onerror = function (event) {
     // Handle errors.
@@ -564,7 +556,7 @@ const createDatabase = (dbName) => {
     // Create an objectStore to hold information about the chat messages. We're
     // going  to use an autoincrement key.
     //
-    let objectStore = dbWebRTC.createObjectStore('messages', {
+    const objectStore = dbWebRTC.createObjectStore('messages', {
       autoIncrement: true,
     });
 
@@ -578,14 +570,13 @@ const createDatabase = (dbName) => {
 
     // Provide an welcome message
 
-    let dateTime = new Date();
+    const dateTime = new Date();
 
-    let welcomeMessage = new Message(
+    const welcomeMessage = new Message(
       'webrtc',
       'Hello! Welcome to WebRTC App! Type your message in the field below and press send!',
       false,
       dateTime,
-      // token.slice(1),
       callToken,
       partySide
     );
@@ -593,9 +584,7 @@ const createDatabase = (dbName) => {
   };
 
   request.onsuccess = function (event) {
-    console.log(
-      'request.onsuccess, database opened, now we can add / remove / look for data in it!'
-    );
+    console.log('request.onsuccess, database opened');
     // The result is the database itself
     dbWebRTC = event.target.result;
     // Are there any messages received in the queue?
@@ -609,7 +598,7 @@ const createDatabase = (dbName) => {
 
 const addMessage = (message) => {
   // Create a read / write transaction
-  let transaction = dbWebRTC.transaction(['messages'], 'readwrite');
+  const transaction = dbWebRTC.transaction(['messages'], 'readwrite');
 
   // Do something when all the data is added to the database.
   transaction.oncomplete = function (event) {
@@ -620,13 +609,13 @@ const addMessage = (message) => {
     console.log(`transaction.onerror errcode ${event.target.error.name}`);
   };
 
-  let objectStore = transaction.objectStore('messages');
+  const objectStore = transaction.objectStore('messages');
 
   // Save message in the message store
-  let request = objectStore.add(message);
+  const request = objectStore.add(message);
 
   request.onsuccess = function (event) {
-    console.log(`Message ${event.target.result} added.`);
+    // console.log(`Message ${event.target.result} added.`);
   };
 
   request.onerror = function (event) {
@@ -640,17 +629,16 @@ const readAllMessages = () => {
   if (!dbWebRTC) {
     console.log('dbWebRTC not opened');
   }
-  let objectStore = dbWebRTC.transaction('messages').objectStore('messages');
+  const objectStore = dbWebRTC.transaction('messages').objectStore('messages');
   // the array of messages that will hold results
 
   objectStore.openCursor().onsuccess = function (event) {
-    let cursor = event.target.result;
+    const cursor = event.target.result;
     if (cursor) {
       // add a message in the array with the same token and party
       // party is used to avoid duplicated messages in localhost usage
       if (
         cursor.value.partySide === partySide &&
-        // cursor.value.token === token.slice(1)
         cursor.value.token === callToken
       ) {
         messages.push(cursor.value);
@@ -660,16 +648,15 @@ const readAllMessages = () => {
       // print messages if canvas is present
       if (toggleCanvas) {
         printMessage(canvas, ctx, messages, 1);
-        let slider = document.getElementById('slider');
-        slider.setAttribute('max', messages.length);
+        document.getElementById('slider').setAttribute('max', messages.length);
       }
     }
   };
 };
 
 const slideMessage = () => {
-  let slider = document.getElementById('slider');
+  const slider = document.getElementById('slider');
   printMessage(canvas, ctx, messages, slider.value);
 };
 
-export { setDataChannel, onDataChannel, dataChannel, toggleCanvasChat };
+export { setDataChannel, onDataChannel, toggleCanvasChat };

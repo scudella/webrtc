@@ -380,6 +380,7 @@ const createPeerConnection = ({ token, fromParty }) => {
     sendersSharedScreen: [],
     remoteShareVideo: false,
     callState: { divContainer: null, currentState: '' },
+    chatDataChannel: null,
   };
 
   connection.push(pc);
@@ -599,8 +600,9 @@ const callerSignalling = (event) => {
     document.title = 'Callee Leg';
   } else if (signal.type === 'callee_arrived') {
     document.title = 'Chair Leg';
-    const { peerConnection, fromParty } = createPeerConnection(signal);
-    setDataChannel(peerConnection);
+    const pc = createPeerConnection(signal);
+    const { peerConnection, fromParty } = pc;
+    setDataChannel(pc);
 
     // add camera and mic stream to pc
     const { mediaStream } = allMediaStreams.find(
@@ -751,8 +753,9 @@ const callerSignalling = (event) => {
 const calleeSignalling = (event) => {
   const signal = JSON.parse(event.data);
   if (signal.type === 'party_arrived') {
-    const { peerConnection, fromParty } = createPeerConnection(signal);
-    setDataChannel(peerConnection);
+    const pc = createPeerConnection(signal);
+    const { peerConnection, fromParty } = pc;
+    setDataChannel(pc);
 
     // add camera and mic stream to pc
     const { mediaStream } = allMediaStreams.find(
@@ -802,7 +805,9 @@ const calleeSignalling = (event) => {
       pc = createPeerConnection(signal);
       peerConnection = pc.peerConnection;
       // Set listeners for data channel
-      peerConnection.ondatachannel = onDataChannel;
+      peerConnection.addEventListener('datachannel', (event) =>
+        onDataChannel(event, pc)
+      );
       // add camera and mic stream to pc
       const { mediaStream } = allMediaStreams.find(
         (stream) => stream.videoId === 'local_video'
@@ -1527,4 +1532,4 @@ const muteLocalVideo = (event) => {
   });
   video.muted = !video.muted;
 };
-export { partySide, callToken };
+export { partySide, callToken, connection };
