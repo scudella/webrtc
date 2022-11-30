@@ -1098,6 +1098,13 @@ const createVideo = (videoid, event, fromParty) => {
     } else {
       videoContainer.classList.add('videoContainerChatShare');
     }
+    divContainer.append(vid);
+
+    // Insert video in the DOM
+    videoContainer.append(divContainer);
+
+    // Add remote stream tracks to the new video
+    vid.srcObject = event.streams[0];
   } else {
     // assign a position for this video on screen
     const pos = position.shift();
@@ -1107,39 +1114,43 @@ const createVideo = (videoid, event, fromParty) => {
         pc.position = pos;
       }
     });
+    divContainer.append(vid);
+
+    // Insert video in the DOM
+    videoContainer.append(divContainer);
+
+    // Add remote stream tracks to the new video
+    vid.srcObject = event.streams[0];
+
+    //
+    // Web Audio to show mic activity on the remote side
+    //
+    const { dataArray, analyser } = buildAudioGraph({
+      stream: event.streams[0],
+    });
+    const canvasAudio = document.createElement('canvas');
+    canvasAudio.className = 'canvasAudio noCanvasAudio';
+    canvasAudio.setAttribute('height', '30');
+    canvasAudio.setAttribute('width', '60');
+    divContainer.append(canvasAudio);
+    const canvasContext = canvasAudio.getContext('2d');
+    const width = canvasAudio.width;
+    const height = canvasAudio.height;
+    requestAnimationFrame(() =>
+      viewAudioGraph({
+        canvasElement: canvasAudio,
+        canvasContext,
+        width,
+        height,
+        analyser,
+        dataArray,
+        treshold: 100,
+      })
+    );
   }
-  divContainer.append(vid);
 
-  // Insert video in the DOM
-  videoContainer.append(divContainer);
-
-  // Add remote stream tracks to the new video
-  vid.srcObject = event.streams[0];
   // Add event listener for double click
   vid.addEventListener('dblclick', videoDblClick);
-  //
-  // Web Audio to show mic activity on the remote side
-  //
-  const { dataArray, analyser } = buildAudioGraph({ stream: event.streams[0] });
-  const canvasAudio = document.createElement('canvas');
-  canvasAudio.className = 'canvasAudio noCanvasAudio';
-  canvasAudio.setAttribute('height', '30');
-  canvasAudio.setAttribute('width', '60');
-  divContainer.append(canvasAudio);
-  const canvasContext = canvasAudio.getContext('2d');
-  const width = canvasAudio.width;
-  const height = canvasAudio.height;
-  requestAnimationFrame(() =>
-    viewAudioGraph({
-      canvasElement: canvasAudio,
-      canvasContext,
-      width,
-      height,
-      analyser,
-      dataArray,
-      treshold: 100,
-    })
-  );
 
   return { mediaStream: event.streams[0], videoElement: vid, divContainer };
 };
