@@ -342,7 +342,7 @@ nav {
   align-items: center;
   -webkit-box-pack: justify;
   justify-content: space-between;
-  padding: 0.5rem;
+  padding: 0.4rem 2rem;
 }
 .nav-toggle {
   font-size: 1.5rem;
@@ -377,6 +377,7 @@ nav {
     -webkit-column-gap: 2rem;
     -moz-column-gap: 2rem;
     column-gap: 2rem;
+    font-size: large;
   }
 }
 .nav-links a {
@@ -696,7 +697,7 @@ Video
 }
 
 .remoteVideoContainer {
-  /* grid-area: rv-1; */
+  position: relative;
   width: 214px;
   height: 160px;
   border: 5px solid var(--grey-700);
@@ -796,6 +797,14 @@ Video
 }
 .frontVideo {
   z-index: 7;
+}
+.canvasAudio {
+  z-index: 8;
+  position: absolute;
+  bottom: 0;
+}
+.noCanvasAudio {
+  z-index: -1;
 }
 .new-state {
   border-color: var(--white);
@@ -1193,7 +1202,7 @@ Home, register, login ... and Meeting Page
 .underline {
   width: 5rem;
   height: 0.25rem;
-  margin-bottom: 1.25rem;
+  margin-bottom: 0.25rem;
   background: var(--primary-500);
   margin-left: auto;
   margin-right: auto;
@@ -1201,9 +1210,15 @@ Home, register, login ... and Meeting Page
 .btn-gen {
   margin: 1rem auto;
 }
-.btn-small {
-  padding: 0.25rem 0.5rem;
-  font-size: 0.75rem;
+@media screen and (min-width: 768px) {
+  .btn-small {
+    padding: 0.15rem 0.5rem;
+    font-size: 0.75rem;
+  }
+}
+
+.btn-logout {
+  font-size: 1rem;
 }
 .button-start {
   display: grid;

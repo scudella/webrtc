@@ -1012,9 +1012,17 @@ const removeRemotePC = ({ token, fromParty, pcDisconnect }) => {
     }
 
     if (!connection.length) {
+      // mute video
+      mute.classList.remove('unmute');
+      mute.disabled = true;
+      video.muted = true;
+      allMediaStreams.forEach((streamObj) => {
+        if (streamObj.videoId === 'local_video') {
+          streamObj.mediaStream.getAudioTracks()[0].enabled = false;
+        }
+      });
       shareScreen.disabled = true;
       replaceScreen.disabled = true;
-      mute.disabled = true;
       shareVideo.disabled = true;
       canvasChat.disabled = true;
       if (partySide === 'callee') {
@@ -1073,7 +1081,7 @@ const removeAllPC = () => {
  * for remote video or screen share) and the on track event. It returns the
  * ontrack event.streams[0], to store on allMediaStreams for subsequent ontrack
  * events for the same stream.
- */
+ **/
 const createVideo = (videoid, event, fromParty) => {
   // creates a video element
   const vid = document.createElement('video');
@@ -1109,6 +1117,29 @@ const createVideo = (videoid, event, fromParty) => {
   vid.srcObject = event.streams[0];
   // Add event listener for double click
   vid.addEventListener('dblclick', videoDblClick);
+  //
+  // Web Audio to show mic activity on the remote side
+  //
+  const { dataArray, analyser } = buildAudioGraph({ stream: event.streams[0] });
+  const canvasAudio = document.createElement('canvas');
+  canvasAudio.className = 'canvasAudio noCanvasAudio';
+  canvasAudio.setAttribute('height', '30');
+  canvasAudio.setAttribute('width', '60');
+  divContainer.append(canvasAudio);
+  const canvasContext = canvasAudio.getContext('2d');
+  const width = canvasAudio.width;
+  const height = canvasAudio.height;
+  requestAnimationFrame(() =>
+    viewAudioGraph({
+      canvasElement: canvasAudio,
+      canvasContext,
+      width,
+      height,
+      analyser,
+      dataArray,
+      treshold: 100,
+    })
+  );
 
   return { mediaStream: event.streams[0], videoElement: vid, divContainer };
 };
@@ -1540,6 +1571,92 @@ const muteLocalVideo = (event) => {
       sender.track.enabled = video.muted;
     }
   });
+  allMediaStreams.forEach((streamObj) => {
+    if (streamObj.videoId === 'local_video') {
+      streamObj.mediaStream.getAudioTracks()[0].enabled = video.muted;
+    }
+  });
   video.muted = !video.muted;
 };
+
+const buildAudioGraph = ({ stream }) => {
+  const audioContext = new AudioContext();
+
+  const sourceNode = audioContext.createMediaStreamSource(stream);
+
+  // Create an analyser node
+  const analyser = audioContext.createAnalyser();
+
+  // power of 2
+  analyser.fftSize = 32;
+  const bufferLength = analyser.frequencyBinCount;
+  const dataArray = new Uint8Array(bufferLength);
+
+  sourceNode.connect(analyser);
+  analyser.connect(audioContext.destination);
+  return { dataArray, analyser };
+};
+
+const viewAudioGraph = ({
+  canvasElement,
+  canvasContext,
+  width,
+  height,
+  analyser,
+  dataArray,
+  treshold,
+}) => {
+  canvasContext.save();
+  canvasContext.fillStyle = 'rgba(0, 0, 0, 0.01)';
+  canvasContext.fillRect(0, 0, width, height);
+
+  analyser.getByteFrequencyData(dataArray);
+  const nbFreq = dataArray.length;
+
+  const spaceWidth = 4;
+  const barWidth = 2;
+  const numberBars = Math.floor(1.1 * Math.round(width / spaceWidth));
+  let magnitude;
+
+  canvasContext.lineCap = 'square';
+  let mute = true;
+  for (let i = 0; i < numberBars; ++i) {
+    magnitude = 0.15 * dataArray[Math.round((i * nbFreq) / numberBars)];
+    if (magnitude) {
+      mute = false;
+    }
+
+    canvasContext.fillStyle =
+      'hsl( ' + Math.round((i * 360) / numberBars) + ', 100%, 50%)';
+    canvasContext.fillRect(i * spaceWidth, height, barWidth, -magnitude);
+  }
+
+  if (mute) {
+    treshold--;
+    if (!treshold) {
+      treshold = 100;
+      canvasElement.classList.add('noCanvasAudio');
+    }
+  } else {
+    treshold--;
+    if (!treshold) {
+      treshold = 100;
+      canvasElement.classList.remove('noCanvasAudio');
+    }
+  }
+  canvasContext.restore();
+
+  requestAnimationFrame(() =>
+    viewAudioGraph({
+      canvasElement,
+      canvasContext,
+      width,
+      height,
+      analyser,
+      dataArray,
+      treshold,
+    })
+  );
+};
+
 export { partySide, callToken, connection };
