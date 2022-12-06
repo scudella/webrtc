@@ -23,6 +23,7 @@ window.onload = async function init() {
   const tokenGen = document.querySelector('#tokenGen');
   const videoButton = document.getElementById('startvideo');
   const avatar = document.querySelector('.user');
+  const avatarPic = document.querySelector('.avatar');
   const codeCopy = document.getElementById('codeCopy');
   const codeCheck = document.getElementById('codeCheck');
   const urlCopy = document.getElementById('urlCopy');
@@ -172,7 +173,8 @@ window.onload = async function init() {
   if (localStorage.getItem('user')) {
     const user = JSON.parse(localStorage.getItem('user'));
     if (user) {
-      avatar.innerText = user.name;
+      avatar.innerText = user.name.substring(0, 26);
+      avatarPic.src = user.picture;
     }
   }
   logoutButton.addEventListener('click', logoutUser);

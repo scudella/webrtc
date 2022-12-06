@@ -49,7 +49,36 @@ app.use(
   })
 );
 
-app.use(helmet());
+app.use(
+  helmet.contentSecurityPolicy({
+    directives: {
+      scriptSrc: ["'self'", 'https://accounts.google.com/gsi/client'],
+      defaultSrc: ["'self'", 'https://accounts.google.com'],
+      styleSrc: [
+        "'self'",
+        'https://accounts.google.com/gsi/style',
+        'https://cdnjs.cloudflare.com/ajax/libs/font-awesome/',
+        "'unsafe-inline'",
+      ],
+      imgSrc: [
+        "'self'",
+        'https://lh3.googleusercontent.com',
+        `${process.env.CLOUDINARY_IMAGES}`,
+      ],
+    },
+  })
+);
+app.use(
+  helmet.crossOriginOpenerPolicy({
+    policy: 'same-origin-allow-popups',
+  })
+);
+app.use(
+  helmet.referrerPolicy({
+    policy: 'strict-origin-when-cross-origin',
+  })
+);
+
 app.use(cors());
 app.use(xss());
 

@@ -40,6 +40,7 @@ const mute = document.querySelector('#mute');
 const shareVideo = document.querySelector('#shareVideo');
 const canvasChat = document.getElementById('canvasChat');
 const avatar = document.querySelector('.user');
+const avatarPic = document.querySelector('.avatar');
 
 window.onload = function init() {
   serverOrigin = document.location.origin;
@@ -57,8 +58,8 @@ window.onload = function init() {
 
   if (localStorage.getItem('user')) {
     const user = JSON.parse(localStorage.getItem('user'));
-
-    avatar.innerText = user.name;
+    avatar.innerText = user.name.substring(0, 26);
+    avatarPic.src = user.picture;
   }
 
   navToggle.addEventListener('click', function (evt) {

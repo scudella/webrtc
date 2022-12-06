@@ -17,6 +17,7 @@ const UserSchema = new mongoose.Schema({
       validator: validator.isEmail,
       message: 'Please provide valid email',
     },
+    maxlength: 30,
   },
   password: {
     type: String,
@@ -40,6 +41,14 @@ const UserSchema = new mongoose.Schema({
   },
   passwordTokenExpirationDate: {
     type: Date,
+  },
+  sub: {
+    type: String,
+    default: '',
+  },
+  picture: {
+    type: String,
+    maxlength: 120,
   },
 });
 

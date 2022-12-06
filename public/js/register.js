@@ -13,6 +13,7 @@ OF THIS SOFTWARE.
 */
 
 import { toast } from './utils/toast.js';
+import { googleButtonLogin } from './utils/googleLogin.js';
 
 window.onload = function init() {
   const inputName = document.getElementById('name');
@@ -65,8 +66,40 @@ window.onload = function init() {
     }
   };
 
+  const handleCredentialResponse = async (response) => {
+    const { credential } = response;
+    const loginUser = { credential };
+    form.classList.add('no-form');
+    sectionMeeting.classList.add('no-meeting');
+    sectionPage.classList.remove('no-page');
+    try {
+      const resp = await axios.post(`/api/v1/auth/login`, loginUser);
+      const user = resp.data.user;
+      // send welcome message
+      sectionPage.classList.add('no-page');
+      sectionMeeting.classList.remove('no-meeting');
+      alert.classList.add('alert-success');
+      alert.style.opacity = '1';
+      alert.textContent = `Welcome, ${user.name}. Redirecting to meeting setup...`;
+      setTimeout(() => {
+        // store user to local storage
+        localStorage.setItem('user', JSON.stringify(user));
+        document.location = `${document.location.origin}/meeting/`;
+      }, 2000);
+    } catch (error) {
+      sectionPage.classList.add('no-page');
+      sectionMeeting.classList.remove('no-meeting');
+      toast({ alertClass: 'alert-danger', error });
+      setTimeout(() => {
+        form.classList.remove('no-form');
+      }, 3200);
+    }
+  };
+
   inputName.addEventListener('input', getName);
   inputEmail.addEventListener('input', getEmail);
   inputPassword.addEventListener('input', getPassword);
   form.addEventListener('submit', register);
+
+  googleButtonLogin(handleCredentialResponse, 'medium', false);
 };

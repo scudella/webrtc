@@ -9,8 +9,12 @@ const {
   sendVerificationEmail,
   sendResetPasswordEmail,
   createHash,
+  verifyGoogleJWT,
+  defaultPasswordConfig,
 } = require('../utils');
 const crypto = require('crypto');
+const strongPaswordGenerator = require('strong-password-generator');
+const { avatar } = require('../utils/avatar');
 
 const register = async (req, res) => {
   const { name, email, password } = req.body;
@@ -24,12 +28,17 @@ const register = async (req, res) => {
   const role = isFirstAccount ? 'admin' : 'user';
 
   const verificationToken = crypto.randomBytes(40).toString('hex');
+
+  // Select a random avatar;
+  picture = avatar[Math.floor(Math.random() * avatar.length)];
+
   const user = await User.create({
     name,
     email,
     password,
     role,
     verificationToken,
+    picture,
   });
 
   const origin = process.env.CLIENT_ORIGIN;
@@ -47,25 +56,62 @@ const register = async (req, res) => {
 };
 
 const login = async (req, res) => {
-  const { email, password } = req.body;
+  const { email, password, credential } = req.body;
+  let user;
 
-  if (!email || !password) {
+  if (!credential && (!email || !password)) {
     throw new CustomError.BadRequestError('Please provide email and password');
   }
 
-  const user = await User.findOne({ email });
-  if (!user) {
-    throw new CustomError.UnauthenticatedError('Invalid Credentials');
-  }
-  const isPasswordCorrect = await user.comparePassword(password);
-  if (!isPasswordCorrect) {
-    throw new CustomError.UnauthenticatedError('Invalid Credentials');
+  // credential from google login
+  if (credential) {
+    try {
+      const { sub, email, email_verified, name, picture } =
+        await verifyGoogleJWT(credential);
+      user = await User.findOne({ email });
+      if (!user) {
+        // user does not exist. register required and done here.
+        // if exists nothing else required
+        if (!email_verified) {
+          throw new CustomError.BadRequestError(
+            'Please provide valid gmail credentials'
+          );
+        }
+        const password = strongPaswordGenerator.generatePassword();
+        user = await User.create({
+          name,
+          email,
+          password,
+          role: 'user',
+          verificationToken: '',
+          isVerified: true,
+          verified: Date.now(),
+          picture,
+          sub,
+        });
+      }
+    } catch (error) {
+      throw new CustomError.BadRequestError(
+        'Please provide valid gmail credentials'
+      );
+    }
+    // email and password for regular login
+  } else {
+    user = await User.findOne({ email });
+    if (!user) {
+      throw new CustomError.UnauthenticatedError('Invalid Credentials');
+    }
+    const isPasswordCorrect = await user.comparePassword(password);
+    if (!isPasswordCorrect) {
+      throw new CustomError.UnauthenticatedError('Invalid Credentials');
+    }
+
+    if (!user.isVerified) {
+      throw new CustomError.UnauthenticatedError('Please, verify your email');
+    }
   }
 
-  if (!user.isVerified) {
-    throw new CustomError.UnauthenticatedError('Please, verify your email');
-  }
-
+  // same path for regular login or google login
   const tokenUser = createTokenUser(user);
 
   // create refresh token
@@ -74,6 +120,8 @@ const login = async (req, res) => {
   // check for existing token
   const existingToken = await Token.findOne({ user: user._id });
   if (existingToken) {
+    // the isValid should be always true. If a user is giving a hard time
+    // it can be - at this point - manually disabled at the database
     const { isValid } = existingToken;
     if (!isValid) {
       throw new CustomError.UnauthenticatedError('Invalid credentials');
@@ -184,6 +232,16 @@ const resetPassword = async (req, res) => {
   res.send('reset password');
 };
 
+const showWebId = (req, res) => {
+  const clientId = process.env.GOOGLE_WEB_CLIENT_ID;
+  res.status(StatusCodes.OK).json({ clientId });
+};
+
+const showAndroidId = (req, res) => {
+  const clientId = process.env.GOOGLE_ANDROID_CLIENT_ID;
+  res.status(StatusCodes.OK).json({ clientId });
+};
+
 module.exports = {
   register,
   login,
@@ -191,4 +249,6 @@ module.exports = {
   verifyEmail,
   forgotPassword,
   resetPassword,
+  showWebId,
+  showAndroidId,
 };

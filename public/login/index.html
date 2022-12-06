@@ -26,6 +26,7 @@ OF THIS SOFTWARE. -->
     <script src="../js/dist/axios1.1.2.min.js"></script>
     <script type="module" src="../js/login.js"></script>
     <script type="'module" src="../js/utils/toast.js"></script>
+    <script src="https://accounts.google.com/gsi/client" async defer></script>
     <!-- css -->
     <link rel="stylesheet" href="../css/style.css" />
   </head>
@@ -48,10 +49,8 @@ OF THIS SOFTWARE. -->
       </section>
       <section class="meeting">
         <div class="meeting-center">
+          <div class="mg-2"></div>
           <div class="form-container">
-            <div class="alertCodeNotProvided">
-              <p class="alert alert-show alert-top"></p>
-            </div>
             <form class="form form-opacity">
               <!-- single form row -->
               <div class="form-row">
@@ -61,6 +60,7 @@ OF THIS SOFTWARE. -->
                   type="email"
                   name="email"
                   id="email"
+                  maxlength="30"
                   required
                 />
               </div>
@@ -74,6 +74,8 @@ OF THIS SOFTWARE. -->
                   type="password"
                   name="password"
                   id="password"
+                  minlength="8"
+                  maxlength="20"
                   required
                 />
               </div>
@@ -81,6 +83,8 @@ OF THIS SOFTWARE. -->
               <button type="submit" class="btn btn-block btn-login">
                 Login
               </button>
+              <!-- google oauth -->
+              <div id="googleButton"></div>
               <p class="p-login">
                 Don't have an account?
                 <a href="../register/" class="register-link">Register</a>
@@ -92,6 +96,9 @@ OF THIS SOFTWARE. -->
                 >
               </p>
             </form>
+          </div>
+          <div class="alertCodeNotProvided">
+            <p class="alert alert-show alert-top"></p>
           </div>
         </div>
       </section>
