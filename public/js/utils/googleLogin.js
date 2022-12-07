@@ -16,6 +16,8 @@ const fetchClientId = async (agent) => {
 
 const googleButtonLogin = async (callback, size, oneTap) => {
   let clientId;
+  let uxMode;
+  let android = false;
   if (
     navigator.userAgent.includes('Linux; Android 10') ||
     navigator.userAgent.includes('Linux; Android 11') ||
@@ -24,20 +26,34 @@ const googleButtonLogin = async (callback, size, oneTap) => {
     navigator.userAgent.includes('samsung')
   ) {
     clientId = await fetchClientId('android');
+    uxMode = 'redirect';
+    android = true;
   } else {
     clientId = await fetchClientId('web');
+    uxMode = 'popup';
   }
 
-  google.accounts.id.initialize({
-    client_id: clientId,
-    callback,
-  });
-  google.accounts.id.renderButton(
-    document.getElementById('googleButton'),
-    { theme: 'outline', size } // customization attributes
-  );
-  if (oneTap) {
-    google.accounts.id.prompt(); // also display the One Tap dialog
+  // android has old libraries. need to implement some alternative
+  // https://developers.google.com/identity/sign-in/android/start
+  // or do a redirect to a local address
+  // so for now do not provide google login button
+  if (!android) {
+    google.accounts.id.initialize({
+      client_id: clientId,
+      callback,
+      ux_mode: uxMode,
+    });
+    google.accounts.id.renderButton(
+      document.getElementById('googleButton'),
+      { theme: 'outline', size } // customization attributes
+    );
+    if (oneTap) {
+      google.accounts.id.prompt(); // also display the One Tap dialog
+    }
+  } else {
+    // hide checkbox for avatar update
+    document.querySelector('.input-checkbox').style.display = 'none';
+    document.querySelector('.input-avatar').style.display = 'none';
   }
 };
 

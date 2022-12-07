@@ -60,6 +60,9 @@ window.onload = function init() {
     const user = JSON.parse(localStorage.getItem('user'));
     avatar.innerText = user.name.substring(0, 26);
     avatarPic.src = user.picture;
+  } else {
+    avatar.style.visibility = 'hidden';
+    avatarPic.style.visibility = 'hidden';
   }
 
   navToggle.addEventListener('click', function (evt) {

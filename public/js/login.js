@@ -66,7 +66,8 @@ window.onload = function init() {
 
   const handleCredentialResponse = async (response) => {
     const { credential } = response;
-    const loginUser = { credential };
+    const checkbox = document.querySelector('.input-checkbox').checked;
+    const loginUser = { credential, checkbox };
     form.classList.add('no-form');
     sectionMeeting.classList.add('no-meeting');
     sectionPage.classList.remove('no-page');

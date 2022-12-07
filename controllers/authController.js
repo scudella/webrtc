@@ -56,7 +56,7 @@ const register = async (req, res) => {
 };
 
 const login = async (req, res) => {
-  const { email, password, credential } = req.body;
+  const { email, password, credential, checkbox } = req.body;
   let user;
 
   if (!credential && (!email || !password)) {
@@ -89,6 +89,11 @@ const login = async (req, res) => {
           picture,
           sub,
         });
+      } else {
+        if (checkbox) {
+          await User.findOneAndUpdate({ email }, { picture });
+          user.picture = picture;
+        }
       }
     } catch (error) {
       throw new CustomError.BadRequestError(
