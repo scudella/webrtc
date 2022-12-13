@@ -12,6 +12,7 @@ NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF OR IN CONNECTION WITH THE US
 */
 
 import { toast } from './utils/toast.js';
+import { copyrightDate } from './utils/date.js';
 
 window.onload = function init() {
   const inputEmail = document.getElementById('email');
@@ -19,6 +20,7 @@ window.onload = function init() {
   const sectionMeeting = document.querySelector('.meeting');
   const sectionPage = document.querySelector('.page');
   const alert = document.querySelector('.alert-show');
+  copyrightDate();
   let email = '';
 
   const getEmail = (e) => {

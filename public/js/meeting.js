@@ -14,6 +14,8 @@ OF THIS SOFTWARE.
 
 import { toast } from './utils/toast.js';
 import { fetchRoom, fetchUser } from './utils/user.js';
+import { copyrightDate } from './utils/date.js';
+
 window.onload = async function init() {
   let callToken = '';
   let create = true;
@@ -31,6 +33,7 @@ window.onload = async function init() {
   const btnCreate = document.getElementById('btn-create');
   const btnJoin = document.getElementById('btn-join');
   const meetTitle = document.getElementById('meet-title');
+  copyrightDate();
 
   const processGen = () => {
     callToken = `${Date.now()}-${Math.round(Math.random() * 10000)}`;

@@ -1,5 +1,3 @@
-import { toast } from './utils/toast.js';
-
 /*  Copyright (c) 2022 Eduardo S. Libardi, All rights reserved. 
 
 Permission to use, copy, modify, and/or distribute this software for any purpose with or 
@@ -13,6 +11,10 @@ WHATSOEVER RESULTING FROM LOSS OF USE, DATA OR PROFITS, WHETHER IN AN ACTION OF 
 NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF OR IN CONNECTION WITH THE USE OR PERFORMANCE 
 OF THIS SOFTWARE.
 */
+
+import { toast } from './utils/toast.js';
+import { copyrightDate } from './utils/date.js';
+
 window.onload = function init() {
   const videoButton = document.getElementById('startvideo');
   const inputCode = document.querySelector('#givenToken');
@@ -21,6 +23,8 @@ window.onload = function init() {
   const codeCheck = document.getElementById('codeCheck');
   const urlCopy = document.getElementById('urlCopy');
   const urlCheck = document.getElementById('urlCheck');
+  copyrightDate();
+
   const fetchUser = async () => {
     try {
       const response = await axios.get(`/api/v1/users/showMe`);

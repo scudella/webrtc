@@ -13,6 +13,7 @@ OF THIS SOFTWARE.
 */
 
 import { toast } from './utils/toast.js';
+import { copyrightDate } from './utils/date.js';
 
 window.onload = function init() {
   const query = new URLSearchParams(window.location.search);
@@ -20,6 +21,7 @@ window.onload = function init() {
   const form = document.querySelector('.form');
   const sectionMeeting = document.querySelector('.meeting');
   const sectionPage = document.querySelector('.page');
+  copyrightDate();
   let password = '';
 
   const getPassword = (e) => {

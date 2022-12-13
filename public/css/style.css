@@ -1494,3 +1494,34 @@ Modal Page
 .show-container {
   visibility: visible;
 }
+/*
+=============== 
+Legal Pages
+===============
+*/
+.continous-flow {
+  display: block;
+  background-color: var(--backgroundColor);
+}
+.document {
+  margin: 0;
+  margin-right: auto;
+  margin-left: auto;
+  max-width: 768px;
+}
+.title-doc {
+  color: var(--primary-700);
+  font-weight: 800;
+}
+.light-text {
+  color: var(--grey-500);
+}
+.title2-doc {
+  color: var(--primary-600);
+}
+.p-regular {
+  color: var(--grey-500);
+}
+p {
+  max-width: 768px;
+}

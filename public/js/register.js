@@ -14,6 +14,7 @@ OF THIS SOFTWARE.
 
 import { toast } from './utils/toast.js';
 import { googleButtonLogin } from './utils/googleLogin.js';
+import { copyrightDate } from './utils/date.js';
 
 window.onload = function init() {
   const inputName = document.getElementById('name');
@@ -23,6 +24,7 @@ window.onload = function init() {
   const sectionMeeting = document.querySelector('.meeting');
   const sectionPage = document.querySelector('.page');
   const alert = document.querySelector('.alert-show');
+  copyrightDate();
   let name = '';
   let email = '';
   let password = '';
