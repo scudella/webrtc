@@ -273,9 +273,9 @@ const sendMessageChat = () => {
   }
   name = name === undefined ? 'Anonymous' : name;
 
-  // create a new message object with login, the content of
-  // the text area, setting that is from myself, the date,
-  // the ws token without # tag, and the indication of
+  // create a new message object with login; the content of
+  // the text area; setting that is from myself; the date;
+  // the ws token without # tag; and the indication of
   // caller or callee. The party side is required when
   // accessing as local host and sharing the same indexed db.
   const messageL = new Message(

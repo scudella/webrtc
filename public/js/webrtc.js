@@ -139,66 +139,11 @@ window.onload = function init() {
 
         if (partySide === 'caller') {
           // Caller leg
-          socket.onopen = function () {
-            socket.onmessage = callerSignalling;
-            // send join message to the bridge
-            socket.send(
-              JSON.stringify({
-                token: callToken,
-                type: 'join',
-              })
-            );
-            socket.onclose = (event) => {
-              // Is there any connection left?
-              if (!connection.length) {
-                toast({
-                  alertClass: 'alert-danger',
-                  content: 'Server closed the call',
-                  modal: true,
-                });
-                setTimeout(() => {
-                  if (partySide === 'caller') {
-                    document.location = `${serverOrigin}/meeting/`;
-                  } else {
-                    document.location = `${serverOrigin}`;
-                  }
-                }, 3200);
-              }
-            };
-          };
+          // Set websocket accordingly and join the bridge
+          setCaller(true);
         } else {
           // Callee Leg
-          partySide = 'callee';
-
-          socket.onopen = function () {
-            socket.onmessage = calleeSignalling;
-            // send join message to the bridge
-            socket.send(
-              JSON.stringify({
-                token: callToken,
-                type: 'join',
-              })
-            );
-            socket.onclose = (event) => {
-              // Is there any connection left?
-              if (!connection.length) {
-                toast({
-                  alertClass: 'alert-danger',
-                  content: 'Server closed the call',
-                  modal: true,
-                });
-                setTimeout(() => {
-                  if (partySide === 'caller') {
-                    document.location = `${serverOrigin}/meeting/`;
-                  } else {
-                    document.location = `${serverOrigin}`;
-                  }
-                }, 3200);
-              }
-            };
-          };
-
-          document.title = 'Callee Leg';
+          setCallee(true);
         }
       })
       .catch(handleGetUserMediaError);
@@ -592,61 +537,139 @@ const createPeerConnection = ({ token, fromParty }) => {
 /
 */ ////////////////////////////////////////////////////////
 
-// handle signals as a caller
+const setCaller = (initialSet) => {
+  const socketCallerOnclose = () => {
+    socket.onclose = (event) => {
+      // Is there any connection left?
+      if (!connection.length) {
+        toast({
+          alertClass: 'alert-danger',
+          content: 'Call ended',
+          modal: true,
+        });
+        setTimeout(() => {
+          document.location = `${serverOrigin}/meeting/`;
+        }, 3200);
+      }
+    };
+  };
+  document.title = 'Chair Leg';
+  if (initialSet) {
+    socket.onopen = function () {
+      socket.onmessage = callerSignalling;
+      // send join message to the bridge
+      socket.send(
+        JSON.stringify({
+          token: callToken,
+          type: 'join',
+        })
+      );
+      socketCallerOnclose();
+    };
+  } else {
+    socket.onmessage = callerSignalling;
+    socketCallerOnclose();
+  }
+};
+
+const setCallee = (initialSet) => {
+  const socketCalleeOnclose = () => {
+    socket.onclose = (event) => {
+      // Is there any connection left?
+      if (!connection.length) {
+        toast({
+          alertClass: 'alert-danger',
+          content: 'Call ended ',
+          modal: true,
+        });
+        setTimeout(() => {
+          document.location = `${serverOrigin}`;
+        }, 3200);
+      }
+    };
+  };
+  partySide = 'callee';
+  document.title = 'Callee Leg';
+  if (initialSet) {
+    socket.onopen = function () {
+      socket.onmessage = calleeSignalling;
+      // send join message to the bridge
+      socket.send(
+        JSON.stringify({
+          token: callToken,
+          type: 'join',
+        })
+      );
+      socketCalleeOnclose();
+    };
+  } else {
+    socket.onmessage = calleeSignalling;
+    socketCalleeOnclose();
+  }
+};
+
+const callerReceivesCalleeArrived = (signal) => {
+  const pc = createPeerConnection(signal);
+  const { peerConnection, fromParty } = pc;
+  setDataChannel(pc);
+
+  // add camera and mic stream to pc
+  const { mediaStream } = allMediaStreams.find(
+    (stream) => stream.videoId === 'local_video'
+  );
+  mediaStream
+    .getTracks()
+    .forEach((track) => peerConnection.addTrack(track, mediaStream));
+
+  // if video is in mute send canvas instead
+  if (noVideoCall) {
+    const canvasStream = allMediaStreams.find(
+      (stream) => stream.videoId === 'canvas'
+    );
+    peerConnection
+      .getSenders()
+      .find((sender) => sender.track.kind === 'video')
+      .replaceTrack(canvasStream.mediaStream.getVideoTracks()[0]);
+  }
+
+  peerConnection
+    .createOffer()
+    .then(function (offer) {
+      console.log('Offer created. Set local Description');
+      return peerConnection.setLocalDescription(offer);
+    })
+    .then(function () {
+      console.log('Description created. Sent to peer.');
+      socket.send(
+        JSON.stringify({
+          token: callToken,
+          type: 'description',
+          sdp: peerConnection.localDescription,
+          toParty: fromParty,
+        })
+      );
+    })
+    .catch(function (error) {
+      console.log(error);
+    });
+};
+
+////////////////////////////////////
+//
+//  handle signals as a caller
+//
+////////////////////////////////////
+
 const callerSignalling = (event) => {
   const signal = JSON.parse(event.data);
   if (signal.type === 'caller_arrived') {
     // Server asks this instance to be Callee Leg
     // probably there is already another instance
     // with the same credentials in the bridge
-    socket.onmessage = calleeSignalling;
-    partySide = 'callee';
-    document.title = 'Callee Leg';
+    // Set Callee without joining again
+    setCallee(false);
   } else if (signal.type === 'callee_arrived') {
-    document.title = 'Chair Leg';
-    const pc = createPeerConnection(signal);
-    const { peerConnection, fromParty } = pc;
-    setDataChannel(pc);
-
-    // add camera and mic stream to pc
-    const { mediaStream } = allMediaStreams.find(
-      (stream) => stream.videoId === 'local_video'
-    );
-    mediaStream
-      .getTracks()
-      .forEach((track) => peerConnection.addTrack(track, mediaStream));
-
-    // if video is in mute send canvas instead
-    if (noVideoCall) {
-      const canvasStream = allMediaStreams.find(
-        (stream) => stream.videoId === 'canvas'
-      );
-      peerConnection
-        .getSenders()
-        .find((sender) => sender.track.kind === 'video')
-        .replaceTrack(canvasStream.mediaStream.getVideoTracks()[0]);
-    }
-
-    peerConnection
-      .createOffer()
-      .then(function (offer) {
-        console.log('Offer created. Set local Description');
-        return peerConnection.setLocalDescription(offer);
-      })
-      .then(function () {
-        console.log('Description created. Sent to peer.');
-        socket.send(
-          JSON.stringify({
-            token: callToken,
-            type: 'description',
-            sdp: peerConnection.localDescription,
-            toParty: fromParty,
-          })
-        );
-      })
-      .catch(function (error) {
-        console.log(error);
-      });
+    callerReceivesCalleeArrived(signal);
   } else if (signal.type === 'ice-candidate') {
     const { peerConnection } = connection.find(
       (pc) => pc.token === signal.token && pc.fromParty === signal.fromParty
@@ -767,6 +790,7 @@ const calleeSignalling = (event) => {
       );
     }, 15000);
   } else if (signal.type === 'party_arrived') {
+    // callee will create a peer connection to the other callee
     const pc = createPeerConnection(signal);
     const { peerConnection, fromParty } = pc;
     setDataChannel(pc);
@@ -810,6 +834,30 @@ const calleeSignalling = (event) => {
       .catch(function (error) {
         console.log(error);
       });
+  } else if (signal.type === 'caller_arrived') {
+    // This leg is a callee probably due a browser address paste or
+    // by a browser reset
+    // It is signed as owner but the partySide at the local storage
+    // was empty and this leg does not know.
+    // The server checks the signed cookie with the jwt and sends
+    // this message as it checks there is already an owner at the
+    // room
+    // If it is a browser reset of the only owner,
+    // the server will propably take measures when the server does not
+    // receive a response from the owner.
+    // Otherwise, wait for the ice-candidates, if it is a second
+    // owner
+    console.log(`Ignoring ${signal.type} received as a callee`);
+  } else if (signal.type === 'callee_arrived') {
+    // This leg is a callee probably due to a browser address paste
+    // or because the server asked the owner to behave as a callee
+    // as there was another caller that initiated the bridge in the server
+    // Implicitly upgrading to caller
+    console.log('self upgrade to caller');
+    partySide = 'caller';
+    setCaller(false);
+    // behaves as the caller receiving callee_arrived
+    callerReceivesCalleeArrived(signal);
   } else {
     let peerConnection;
     let pc = connection.find(
