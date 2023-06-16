@@ -12,27 +12,32 @@ NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF OR IN CONNECTION WITH THE US
 OF THIS SOFTWARE.
 */
 
-import { toast } from './utils/toast.js';
-import { fetchRoom, fetchUser } from './utils/user.js';
-import { copyrightDate } from './utils/date.js';
+import { toast } from './utils/toast';
+import { fetchRoom, fetchUser } from './utils/user';
+import { copyrightDate } from './utils/date';
+import axios from 'axios';
 
 window.onload = async function init() {
   let callToken = '';
   let create = true;
-  const logoutButton = document.getElementById('logout');
-  const urlField = document.querySelector('#url');
-  const inputCode = document.querySelector('#givenToken');
-  const tokenGen = document.querySelector('#tokenGen');
-  const videoButton = document.getElementById('startvideo');
-  const avatar = document.querySelector('.user');
-  const avatarPic = document.querySelector('.avatar');
-  const codeCopy = document.getElementById('codeCopy');
-  const codeCheck = document.getElementById('codeCheck');
-  const urlCopy = document.getElementById('urlCopy');
-  const urlCheck = document.getElementById('urlCheck');
-  const btnCreate = document.getElementById('btn-create');
-  const btnJoin = document.getElementById('btn-join');
-  const meetTitle = document.getElementById('meet-title');
+  const logoutButton = document.getElementById('logout')! as HTMLButtonElement;
+  const urlField = document.querySelector('#url')! as HTMLInputElement;
+  const inputCode = document.querySelector('#givenToken')! as HTMLInputElement;
+  const tokenGen = document.querySelector('#tokenGen')! as HTMLButtonElement;
+  const videoButton = document.getElementById(
+    'startvideo'
+  )! as HTMLButtonElement;
+  const avatar = document.querySelector('.user')! as HTMLLIElement;
+  const avatarPic = document.querySelector('.avatar')! as HTMLImageElement;
+  const codeCopy = document.getElementById('codeCopy')! as HTMLElement;
+  const codeCheck = document.getElementById('codeCheck')! as HTMLElement;
+  const urlCopy = document.getElementById('urlCopy')! as HTMLElement;
+  const urlCheck = document.getElementById('urlCheck') as HTMLElement;
+  const btnCreate = document.getElementById('btn-create')! as HTMLButtonElement;
+  const btnJoin = document.getElementById('btn-join')! as HTMLButtonElement;
+  const meetTitle = document.getElementById(
+    'meet-title'
+  )! as HTMLHeadingElement;
   copyrightDate();
 
   const processGen = () => {
@@ -174,7 +179,7 @@ window.onload = async function init() {
   inputCode.addEventListener('input', inputToken);
   urlField.addEventListener('input', inputURL);
   if (localStorage.getItem('user')) {
-    const user = JSON.parse(localStorage.getItem('user'));
+    const user = JSON.parse(localStorage.getItem('user')!);
     if (user) {
       avatar.innerText = user.name.substring(0, 26);
       avatarPic.src = user.picture;

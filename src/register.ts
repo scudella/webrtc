@@ -12,36 +12,39 @@ NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF OR IN CONNECTION WITH THE US
 OF THIS SOFTWARE.
 */
 
-import { toast } from './utils/toast.js';
-import { googleButtonLogin } from './utils/googleLogin.js';
-import { copyrightDate } from './utils/date.js';
+import { toast } from './utils/toast';
+import { googleButtonLogin } from './utils/googleLogin';
+import { copyrightDate } from './utils/date';
+import axios from 'axios';
 
 window.onload = function init() {
-  const inputName = document.getElementById('name');
-  const inputEmail = document.getElementById('email');
-  const inputPassword = document.getElementById('password');
-  const form = document.querySelector('.form');
-  const sectionMeeting = document.querySelector('.meeting');
-  const sectionPage = document.querySelector('.page');
-  const alert = document.querySelector('.alert-show');
+  const inputName = document.getElementById('name')! as HTMLInputElement;
+  const inputEmail = document.getElementById('email')! as HTMLInputElement;
+  const inputPassword = document.getElementById(
+    'password'
+  )! as HTMLInputElement;
+  const form = document.querySelector('.form')! as HTMLFormElement;
+  const sectionMeeting = document.querySelector('.meeting')! as HTMLElement;
+  const sectionPage = document.querySelector('.page')! as HTMLElement;
+  const alert = document.querySelector('.alert-show')! as HTMLParagraphElement;
   copyrightDate();
   let name = '';
   let email = '';
   let password = '';
 
-  const getName = (e) => {
-    name = e.target.value;
+  const getName = (e: Event) => {
+    name = (e.target as HTMLInputElement).value;
   };
 
-  const getEmail = (e) => {
-    email = e.target.value;
+  const getEmail = (e: Event) => {
+    email = (e.target as HTMLInputElement).value;
   };
 
-  const getPassword = (e) => {
-    password = e.target.value;
+  const getPassword = (e: Event) => {
+    password = (e.target as HTMLInputElement).value;
   };
 
-  const register = async (e) => {
+  const register = async (e: Event) => {
     e.preventDefault();
     form.classList.add('no-form');
     sectionMeeting.classList.add('no-meeting');
@@ -68,7 +71,9 @@ window.onload = function init() {
     }
   };
 
-  const handleCredentialResponse = async (response) => {
+  const handleCredentialResponse = async (
+    response: google.accounts.id.CredentialResponse
+  ) => {
     const { credential } = response;
     const loginUser = { credential };
     form.classList.add('no-form');

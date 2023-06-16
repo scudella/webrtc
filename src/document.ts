@@ -1,4 +1,4 @@
-import { copyrightDate } from './utils/date.js';
+import { copyrightDate } from './utils/date';
 
 window.onload = function init() {
   copyrightDate();

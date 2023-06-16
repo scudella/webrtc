@@ -1,3 +1,5 @@
+import axios from 'axios';
+
 const fetchUser = async () => {
   try {
     const response = await axios.get(`/api/v1/users/showMe`);
@@ -17,7 +19,7 @@ const fetchRoom = async () => {
     return response.data.room;
   } catch (error) {
     axios.isAxiosError(error)
-      ? console.log(error.response.data.msg)
+      ? console.log(error.response && error.response.data.msg)
       : console.log(error);
   }
 };

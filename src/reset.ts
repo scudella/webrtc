@@ -12,29 +12,32 @@ NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF OR IN CONNECTION WITH THE US
 OF THIS SOFTWARE.
 */
 
-import { toast } from './utils/toast.js';
-import { copyrightDate } from './utils/date.js';
+import { toast } from './utils/toast';
+import { copyrightDate } from './utils/date';
+import axios from 'axios';
 
 window.onload = function init() {
   const query = new URLSearchParams(window.location.search);
-  const inputPassword = document.getElementById('password');
-  const form = document.querySelector('.form');
-  const sectionMeeting = document.querySelector('.meeting');
-  const sectionPage = document.querySelector('.page');
+  const inputPassword = document.getElementById(
+    'password'
+  )! as HTMLInputElement;
+  const form = document.querySelector('.form')! as HTMLFormElement;
+  const sectionMeeting = document.querySelector('.meeting')! as HTMLElement;
+  const sectionPage = document.querySelector('.page')! as HTMLElement;
   copyrightDate();
   let password = '';
 
-  const getPassword = (e) => {
-    password = e.target.value;
+  const getPassword = (e: Event) => {
+    password = (e.target as HTMLInputElement).value;
   };
 
-  const resetPassword = async (e) => {
+  const resetPassword = async (e: Event) => {
     e.preventDefault();
     form.classList.add('no-form');
     sectionMeeting.classList.add('no-meeting');
     sectionPage.classList.remove('no-page');
     try {
-      const response = await axios.post('/api/v1/auth/reset-password', {
+      await axios.post('/api/v1/auth/reset-password', {
         password,
         token: query.get('token'),
         email: query.get('email'),

@@ -11,23 +11,24 @@ WHATSOEVER RESULTING FROM LOSS OF USE, DATA OR PROFITS, WHETHER IN AN ACTION OF 
 NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
 */
 
-import { toast } from './utils/toast.js';
-import { copyrightDate } from './utils/date.js';
+import { toast } from './utils/toast';
+import { copyrightDate } from './utils/date';
+import axios from 'axios';
 
 window.onload = function init() {
-  const inputEmail = document.getElementById('email');
-  const form = document.querySelector('.form');
-  const sectionMeeting = document.querySelector('.meeting');
-  const sectionPage = document.querySelector('.page');
-  const alert = document.querySelector('.alert-show');
+  const inputEmail = document.getElementById('email')! as HTMLInputElement;
+  const form = document.querySelector('.form')! as HTMLFormElement;
+  const sectionMeeting = document.querySelector('.meeting')! as HTMLElement;
+  const sectionPage = document.querySelector('.page')! as HTMLElement;
+  const alert = document.querySelector('.alert-show')! as HTMLParagraphElement;
   copyrightDate();
   let email = '';
 
-  const getEmail = (e) => {
-    email = e.target.value;
+  const getEmail = (e: Event) => {
+    email = (e.target as HTMLInputElement).value;
   };
 
-  const forgotPassword = async (e) => {
+  const forgotPassword = async (e: Event) => {
     e.preventDefault();
     form.classList.add('no-form');
     sectionMeeting.classList.add('no-meeting');

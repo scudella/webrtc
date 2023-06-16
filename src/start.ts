@@ -12,22 +12,25 @@ NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF OR IN CONNECTION WITH THE US
 OF THIS SOFTWARE.
 */
 
-import { toast } from './utils/toast.js';
-import { copyrightDate } from './utils/date.js';
+import { toast } from './utils/toast';
+import { copyrightDate } from './utils/date';
+import axios from 'axios';
 
 window.onload = function init() {
-  const videoButton = document.getElementById('startvideo');
-  const inputCode = document.querySelector('#givenToken');
-  const urlField = document.querySelector('#url');
-  const codeCopy = document.getElementById('codeCopy');
-  const codeCheck = document.getElementById('codeCheck');
-  const urlCopy = document.getElementById('urlCopy');
-  const urlCheck = document.getElementById('urlCheck');
+  const videoButton = document.getElementById(
+    'startvideo'
+  )! as HTMLButtonElement;
+  const inputCode = document.querySelector('#givenToken')! as HTMLInputElement;
+  const urlField = document.querySelector('#url')! as HTMLInputElement;
+  const codeCopy = document.getElementById('codeCopy')! as HTMLElement;
+  const codeCheck = document.getElementById('codeCheck')! as HTMLElement;
+  const urlCopy = document.getElementById('urlCopy')! as HTMLElement;
+  const urlCheck = document.getElementById('urlCheck')! as HTMLElement;
   copyrightDate();
 
   const fetchUser = async () => {
     try {
-      const response = await axios.get(`/api/v1/users/showMe`);
+      await axios.get(`/api/v1/users/showMe`);
       document.location = `${document.location.origin}/meeting/`;
     } catch (error) {
       console.log('user not logged');

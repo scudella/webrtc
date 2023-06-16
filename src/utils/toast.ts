@@ -1,9 +1,24 @@
-import { axiosError } from './axios.js';
-const alert = document.querySelector('.alert-show');
-const showModal = document.querySelector('.modal-overlay');
-const showContainer = document.querySelector('.modal-container');
+import { axiosError } from './axios';
 
-const toast = ({ alertClass, content, error, modal }) => {
+const alert = document.querySelector('.alert-show')! as HTMLParagraphElement;
+const showModal = document.querySelector('.modal-overlay')! as HTMLDivElement;
+const showContainer = document.querySelector(
+  '.modal-container'
+)! as HTMLDivElement;
+
+type AlertClass = 'alert-danger' | 'alert-success';
+
+const toast = ({
+  alertClass,
+  content,
+  error,
+  modal,
+}: {
+  alertClass: AlertClass;
+  content?: string;
+  error?: unknown;
+  modal?: boolean;
+}) => {
   if (modal) {
     showModal.classList.add('show-modal');
     showContainer.classList.add('show-container');

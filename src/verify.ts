@@ -11,19 +11,22 @@ WHATSOEVER RESULTING FROM LOSS OF USE, DATA OR PROFITS, WHETHER IN AN ACTION OF 
 NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
 */
 
-import { copyrightDate } from './utils/date.js';
+import { copyrightDate } from './utils/date';
+import axios from 'axios';
 
 window.onload = function init() {
   const query = new URLSearchParams(window.location.search);
-  const section = document.querySelector('.section');
-  const sectionPage = document.querySelector('.page');
-  const message = document.getElementById('verify-message');
-  const button = document.querySelector('.no-button');
+  const section = document.querySelector('.section')! as HTMLElement;
+  const sectionPage = document.querySelector('.page')! as HTMLElement;
+  const message = document.getElementById(
+    'verify-message'
+  )! as HTMLHeadingElement;
+  const button = document.querySelector('.no-button')! as HTMLAnchorElement;
   copyrightDate();
 
   const verifyToken = async () => {
     try {
-      const { data } = await axios.post('/api/v1/auth/verify-email', {
+      await axios.post('/api/v1/auth/verify-email', {
         verificationToken: query.get('token'),
         email: query.get('email'),
       });
