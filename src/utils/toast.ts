@@ -39,7 +39,7 @@ const toast = ({
           showModal.classList.remove('show-modal');
         }, 1200);
       }
-    }, 1500);
+    }, 500);
   }, 1800);
 };
 

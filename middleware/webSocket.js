@@ -535,6 +535,15 @@ const bridgeAddLeg = (token, connection, legRole) => {
       webrtcRooms[token][id] = legRole;
       webrtcClients[id].rooms.push(token);
     }
+    // Send the leg its identity
+    connection.send(
+      JSON.stringify({
+        token,
+        type: 'id',
+        id: connection.id,
+      }),
+      logError
+    );
     logComment(`Add ${id} to bridge ${token} as ${legRole}`);
   } catch (error) {
     logError(error);

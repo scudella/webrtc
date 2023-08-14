@@ -60,17 +60,46 @@ OF THIS SOFTWARE. -->
       </div>
 
       <div id="videoContainer" class="videoContainer videoContainerNoChat">
+        <!-- Local Video Camera -->
         <div id="localVideoContainer" class="localVideoContainer">
           <video id="local_video" class="localVideo" autoplay muted></video>
           <canvas id="canvasOverlay" class="behindVideo"> </canvas>
         </div>
+        <!-- youtube video -->
+
+        <div id="youtubeShareContainer" class="localVideoShareContainer">
+          <iframe
+            id="youtubePlayer"
+            frameborder="0"
+            allowfullscreen="1"
+            allow="clipboard-write; encrypted-media; picture-in-picture"
+            width="640"
+            height="390"
+          ></iframe>
+          <script class="unloaded">
+            // Do not delete. Placeholder for youtube script
+          </script>
+        </div>
       </div>
     </main>
     <aside class="sc">
+      <div class="youtube-modal">
+        <form class="ytform">
+          <h5>Youtube video Id</h5>
+          <label for="ytvideo-id">Video Id</label>
+          <input type="text" id="ytvideo-id" />
+          <label for="playlist-id">Play List</label>
+          <input type="text" id="playlist-id" />
+          <button type="button" class="btn btn-yt-c" id="yt-cancel">
+            Cancel
+          </button>
+          <button type="button" class="btn btn-yt" id="yt-submit">Send</button>
+        </form>
+      </div>
       <div class="menu">
-        <button id="shareVideo" class="menu-item" disabled>
-          <i class="fa-solid fa-circle-chevron-right sidebar-icon"></i>
-          <span class="inner-text">Share Video</span>
+        <button id="shareYtube" class="menu-item" disabled>
+          <i class="fa-brands fa-youtube sidebar-icon"></i>
+          <span class="inner-text">Share Youtube</span>
         </button>
 
         <button id="canvasChat" class="menu-item" disabled>
@@ -86,6 +115,11 @@ OF THIS SOFTWARE. -->
         <button id="replace-screen" class="menu-item" disabled>
           <i class="fa-solid fa-share sidebar-icon"></i>
           <span class="inner-text">Share Screen</span>
+        </button>
+
+        <button id="shareVideo" class="menu-item" disabled>
+          <i class="fa-solid fa-circle-chevron-right sidebar-icon"></i>
+          <span class="inner-text">Share Video</span>
         </button>
       </div>
     </aside>

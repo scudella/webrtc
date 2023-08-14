@@ -15,6 +15,12 @@ OF THIS SOFTWARE.
 import { setDataChannel, onDataChannel, toggleCanvasChat } from './chat';
 import { toast } from './utils/toast';
 import { position } from './utils/videoPosition';
+import {
+  setYoutubeDataChannel,
+  handleYoutube,
+  removeYoutube,
+  setupSingleYoutube,
+} from './youtube';
 
 export type Pc = {
   token: string;
@@ -26,6 +32,8 @@ export type Pc = {
   sendersSharedScreen: RTCRtpSender[];
   remoteShareVideo: boolean;
   chatDataChannel?: RTCDataChannel;
+  youtubeDataChannel?: RTCDataChannel;
+  youtubeOwner?: boolean;
   callState: {
     divContainer?: HTMLDivElement;
     currentState: `${RTCIceConnectionState}-state` | undefined;
@@ -58,6 +66,7 @@ let sharingScreen = false;
 let partySide = '';
 let serverOrigin = '';
 let webSocketOrigin = '';
+let myBridgeId: string = '';
 
 const toggleButton = document.getElementById(
   'toggleVideo'
@@ -78,6 +87,7 @@ const hangup = document.getElementById('hangup')! as HTMLButtonElement;
 const shareScreen = document.getElementById(
   'sharescreen'
 )! as HTMLButtonElement;
+const shareYtube = document.getElementById('shareYtube')! as HTMLButtonElement;
 const mute = document.querySelector('#mute')! as HTMLButtonElement;
 const shareVideo = document.querySelector('#shareVideo')! as HTMLButtonElement;
 const canvasChat = document.getElementById('canvasChat')! as HTMLButtonElement;
@@ -461,21 +471,28 @@ const createPeerConnection = ({ token, fromParty }: PartSignal): Pc => {
 
       pc.callState.divContainer = divContainer;
 
-      // Enable mute button
-      mute.disabled = false;
-
-      // Allow video to be shared with remote
-      shareVideo.disabled = false;
+      // TODO - Let every button enabled from start and depending
+      // on the sharing state, it will be disabled/enabled
+      // For now - if there is only one pc we enable, if
+      // there are more pcs we should not touch the buttons here.
+      if (connection.length === 1) {
+        // Enable mute button
+        mute.disabled = false;
+        // Allow video to be shared with remote
+        shareVideo.disabled = false;
+        // Allow youtube video to be shared with remote
+        shareYtube.disabled = false;
+        // Allow screen to be shared with remote
+        shareScreen.disabled = false;
+        replaceScreen.disabled = false;
+        // Enable canvas message to be selected
+        canvasChat.disabled = false;
+      }
+      // create call backs for the buttons that share media / chat
       shareVideo.addEventListener('click', createVideoElement);
-
-      // Allow screen to be shared with remote
-      shareScreen.disabled = false;
+      shareYtube.addEventListener('click', handleYoutube);
       shareScreen.addEventListener('click', sharedScreen);
-      replaceScreen.disabled = false;
       replaceScreen.addEventListener('click', replaceShareScreen);
-
-      // Enable canvas message to be selected
-      canvasChat.disabled = false;
       canvasChat.addEventListener('click', toggleCanvasChat);
 
       // Remote video has additional streams to add
@@ -490,10 +507,11 @@ const createPeerConnection = ({ token, fromParty }: PartSignal): Pc => {
     } else if (!videoShare) {
       const { mediaStream } = createVideo('video_share', event, fromParty);
       allMediaStreams.push({ mediaStream, videoId: 'video_share' });
-      pc.remoteShareVideo = true;
 
+      pc.remoteShareVideo = true;
       shareVideo.disabled = true;
       shareScreen.disabled = true;
+      shareYtube.disabled = true;
 
       // Check for tracks removed
       setTimeout(checkRemoveTrack, 1000);
@@ -536,10 +554,10 @@ const createPeerConnection = ({ token, fromParty }: PartSignal): Pc => {
           break;
         case 'connected':
           console.log('The ice connection has been established.');
-          // When a new party arrives check whether shared video or screen
-          // is in place
+          // When a new party arrives check whether shared video,  screen or youtube is in place
           setupSingleCaptureStream(pc);
           setupSingleSharedScreen(pc);
+          setupSingleYoutube(pc);
           break;
         case 'completed':
           console.log('ICE has found a connection for all components.');
@@ -675,6 +693,7 @@ const callerReceivesCalleeArrived = (signal: Signal) => {
   const pc = createPeerConnection(signal);
   const { peerConnection, fromParty } = pc;
   setDataChannel(pc);
+  setYoutubeDataChannel(pc);
 
   // add camera and mic stream to pc
   const stream = allMediaStreams.find(
@@ -739,7 +758,8 @@ type MessageType =
   | 'party_arrived'
   | 'reset'
   | 'full-bridge'
-  | 'not-available';
+  | 'not-available'
+  | 'id';
 
 type Signal = {
   token: string;
@@ -748,6 +768,7 @@ type Signal = {
   toParty?: string;
   sdp?: RTCSessionDescription;
   candidate?: RTCIceCandidateInit;
+  id?: string;
 };
 
 const callerSignalling = (event: MessageEvent) => {
@@ -869,6 +890,8 @@ const callerSignalling = (event: MessageEvent) => {
     setTimeout(() => {
       document.location = `${serverOrigin}/meeting/`;
     }, 3200);
+  } else if (signal.type === 'id') {
+    myBridgeId = signal.id!;
   } else {
     console.log(`Non-handled ${signal.type} received`);
   }
@@ -897,6 +920,7 @@ const calleeSignalling = (event: MessageEvent) => {
     const pc = createPeerConnection(signal);
     const { peerConnection, fromParty } = pc;
     setDataChannel(pc);
+    setYoutubeDataChannel(pc);
 
     // add camera and mic stream to pc
     const { mediaStream } = allMediaStreams.find(
@@ -963,7 +987,12 @@ const calleeSignalling = (event: MessageEvent) => {
     setCaller(false);
     // behaves as the caller receiving callee_arrived
     callerReceivesCalleeArrived(signal);
-  } else {
+  } else if (signal.type === 'id') {
+    myBridgeId = signal.id!;
+
+    // TODO: introduced this check here and moved if-elses of
+    // calls dropping to this segment
+  } else if (signal.type === 'ice-candidate' || signal.type === 'description') {
     let peerConnection: RTCPeerConnection;
     let pc = connection.find(
       (pc) => pc.token === signal.token && pc.fromParty === signal.fromParty
@@ -1062,6 +1091,7 @@ const calleeSignalling = (event: MessageEvent) => {
               console.log(error);
             });
         } else {
+          // sdp is answer
           peerConnection
             .setRemoteDescription(signal.sdp!)
             .then(function () {
@@ -1084,54 +1114,54 @@ const calleeSignalling = (event: MessageEvent) => {
             });
         }
       }
-    } else if (signal.type === 'hang-up') {
-      // the server cleared the bridge?
-      if (signal.fromParty === 'owner') {
-        toast({
-          alertClass: 'alert-danger',
-          content: 'Hang-up received',
-          modal: true,
-        });
-        console.log('Received hang up notification from other peer');
-        setTimeout(() => {
-          document.location = `${serverOrigin}`;
-        }, 3200);
-      } else {
-        const token = signal.token;
-        const fromParty = signal.fromParty;
-        removeRemotePC({ token, fromParty, pcDisconnect: false });
-      }
-    } else if (signal.type === 'full-bridge') {
-      toast({
-        alertClass: 'alert-danger',
-        content: 'Room is full',
-        modal: true,
-      });
-      setTimeout(() => {
-        document.location = `${serverOrigin}`;
-      }, 3200);
-    } else if (signal.type === 'not-available') {
-      toast({
-        alertClass: 'alert-danger',
-        content: 'The meeting code provided does not exist',
-        modal: true,
-      });
-      setTimeout(() => {
-        document.location = `${serverOrigin}`;
-      }, 3200);
-    } else if (signal.type === 'reset') {
-      toast({
-        alertClass: 'alert-danger',
-        content: 'Meeting reset',
-        modal: true,
-      });
-      socket.close();
-      setTimeout(() => {
-        location.reload();
-      }, 2000);
-    } else {
-      console.log(`Non-handled ${signal.type} received`);
     }
+  } else if (signal.type === 'hang-up') {
+    // the server cleared the bridge?
+    if (signal.fromParty === 'owner') {
+      toast({
+        alertClass: 'alert-danger',
+        content: 'Hang-up received',
+        modal: true,
+      });
+      console.log('Received hang up notification from other peer');
+      setTimeout(() => {
+        document.location = `${serverOrigin}`;
+      }, 3200);
+    } else {
+      const token = signal.token;
+      const fromParty = signal.fromParty;
+      removeRemotePC({ token, fromParty, pcDisconnect: false });
+    }
+  } else if (signal.type === 'full-bridge') {
+    toast({
+      alertClass: 'alert-danger',
+      content: 'Room is full',
+      modal: true,
+    });
+    setTimeout(() => {
+      document.location = `${serverOrigin}`;
+    }, 3200);
+  } else if (signal.type === 'not-available') {
+    toast({
+      alertClass: 'alert-danger',
+      content: 'The meeting code provided does not exist',
+      modal: true,
+    });
+    setTimeout(() => {
+      document.location = `${serverOrigin}`;
+    }, 3200);
+  } else if (signal.type === 'reset') {
+    toast({
+      alertClass: 'alert-danger',
+      content: 'Meeting reset',
+      modal: true,
+    });
+    socket.close();
+    setTimeout(() => {
+      location.reload();
+    }, 2000);
+  } else {
+    console.log(`Non-handled ${signal.type} received`);
   }
 };
 
@@ -1156,13 +1186,22 @@ const removeRemotePC = ({
     (pc) => pc.token === token && pc.fromParty === fromParty
   );
   if (pc) {
-    const { peerConnection, position: pos, remoteShareVideo } = pc;
+    const {
+      peerConnection,
+      position: pos,
+      remoteShareVideo,
+      youtubeOwner,
+    } = pc;
     // return the position placement to the array of positions
     if (pos) {
       position.unshift(pos);
     }
     // close the pc
     peerConnection.close();
+
+    if (youtubeOwner) {
+      removeYoutube();
+    }
 
     if (remoteShareVideo) {
       checkRemoveTrack(true);
@@ -1211,10 +1250,12 @@ const removeRemotePC = ({
           streamObj.mediaStream.getAudioTracks()[0].enabled = false;
         }
       });
+      // TODO: let buttons available even when not connected to anyone
       shareScreen.disabled = true;
       replaceScreen.disabled = true;
       shareVideo.disabled = true;
       canvasChat.disabled = true;
+      shareYtube.disabled = true;
       if (partySide === 'callee') {
         document.location = `${serverOrigin}`;
       }
@@ -1302,7 +1343,11 @@ const createVideo = (
   } else {
     // assign a position for this video on screen
     const pos = position.shift();
-    divContainer.className = `remoteVideoContainer ${pos}`;
+    if (pos) {
+      divContainer.className = `remoteVideoContainer ${pos}`;
+    } else {
+      divContainer.className = `remoteVideoContainer none`;
+    }
     connection.forEach((pc) => {
       if (pc.fromParty === fromParty && pos) {
         pc.position = pos;
@@ -1365,6 +1410,7 @@ const checkRemoveTrack = (pcIsGone: boolean) => {
 
   const videoTracks = oneMediaStream.mediaStream.getTracks();
 
+  // pcIsGone is from a pc being removed that was sharing
   if (!videoTracks.length || pcIsGone) {
     // Remove object
     allMediaStreams = allMediaStreams.filter(
@@ -1397,6 +1443,7 @@ const checkRemoveTrack = (pcIsGone: boolean) => {
     timeout = false;
 
     shareVideo.disabled = false;
+    shareYtube.disabled = false;
     if (!sharingScreen) {
       shareScreen.disabled = false;
       replaceScreen.disabled = false;
@@ -1514,6 +1561,7 @@ const sharedScreen = () => {
       });
       // disable share video buttons
       shareVideo.disabled = true;
+      shareYtube.disabled = true;
 
       screenTrack.onended = function () {
         // get senders
@@ -1532,6 +1580,7 @@ const sharedScreen = () => {
         shareScreen.disabled = false;
         replaceScreen.disabled = false;
         shareVideo.disabled = false;
+        shareYtube.disabled = false;
       };
     })
     .catch(function (error) {
@@ -1543,6 +1592,8 @@ type setupSSS = {
   peerConnection: RTCPeerConnection;
   sendersSharedScreen: Pc['sendersSharedScreen'];
 };
+
+// A newcomer to the conference needs to receive a shared screen already in place
 
 const setupSingleSharedScreen = ({
   peerConnection,
@@ -1588,7 +1639,6 @@ const videoCreateStream = () => {
     // capture stream
     let videoStream = myVideo.captureStream();
     setupCaptureStream(videoStream);
-    // does mozcapture stream feature exist?
   } else {
     console.log('captureStream() not supported');
   }
@@ -1611,23 +1661,15 @@ const setupCaptureStream = (myVideoStream: MediaStream) => {
     videoId: 'myVideo',
   });
 
-  // create button to stop the media
-  let buttonElement = document.createElement('button');
-  buttonElement.id = 'stopVideo';
-  buttonElement.className = 'menu-item stop';
-  let iElement = document.createElement('i');
-  iElement.className = 'fa-solid fa-stop sidebar-icon';
-  let spanElement = document.createElement('span');
-  spanElement.className = 'inner-text';
-  spanElement.textContent = 'Stop Sharing';
-  buttonElement.append(iElement, spanElement);
-  // insert button
-  shareScreen.parentNode!.append(buttonElement);
-  // add event to stop video
-  buttonElement.addEventListener('click', stopVideo);
+  createStopButton(stopVideo);
 
   // MediaStreamTrack.onended.
-  // Call Back probably not called ever. Fixed it with map. TODO: Test it
+  // Usually the track does not end
+  // Reasons to end:
+  //    There is no more data left to send.
+  //    The user revoked the permissions needed for the data to be sent.
+  //    The hardware generating the source data has been removed or ejected.
+  //    A remote peer has permanently stopped sending data; pausing media does not generate an ended event. So, when video reaches the end, this does not generate the event.
   videoTracks.forEach((videoTrack) => {
     videoTrack.onended = function () {
       console.log('track onended called');
@@ -1643,6 +1685,7 @@ const setupCaptureStream = (myVideoStream: MediaStream) => {
         pc.sendersSharedVideo = [];
       });
       shareVideo.disabled = false;
+      shareYtube.disabled = false;
       if (!sharingScreen) {
         shareScreen.disabled = false;
         replaceScreen.disabled = false;
@@ -1651,6 +1694,7 @@ const setupCaptureStream = (myVideoStream: MediaStream) => {
   });
 };
 
+// A newcomer to the conference needs to receive a video already playing
 const setupSingleCaptureStream = ({
   peerConnection,
   sendersSharedVideo,
@@ -1669,11 +1713,13 @@ const setupSingleCaptureStream = ({
   }
 };
 
+// Share Video button pressed
 const createVideoElement = () => {
   // disable sharing a new video
   shareVideo.disabled = true;
   // disable sharing a screen if it is not using the same stream of the video camera
   shareScreen.disabled = true;
+  shareYtube.disabled = true;
 
   // hide sidebar
   links.classList.toggle('show-menu');
@@ -1701,9 +1747,8 @@ const createVideoElement = () => {
   mp4.setAttribute('type', 'video/mp4');
   vid.append(mp4);
   const webm = document.createElement('source');
-  webm.setAttribute('src', `${serverOrigin}/video/sintel.webm`);
-  webm.setAttribute('type', 'video/webm');
   vid.append(webm);
+
   vid.innerHTML += "Sorry, your browser doesn't support embedded videos.";
 
   vid.addEventListener('dblclick', videoDblClick);
@@ -1734,7 +1779,25 @@ const checkSharing = () => {
   }
 };
 
-const stopVideo = () => {
+const createStopButton = (cb: (event: MouseEvent) => void) => {
+  // create button to stop the media
+  let buttonElement = document.createElement('button');
+  buttonElement.id = 'stopVideo';
+  buttonElement.className = 'menu-item stop';
+  let iElement = document.createElement('i');
+  iElement.className = 'fa-solid fa-stop sidebar-icon';
+  let spanElement = document.createElement('span');
+  spanElement.className = 'inner-text';
+  spanElement.textContent = 'Stop Sharing';
+  buttonElement.append(iElement, spanElement);
+  // insert button
+  shareScreen.parentNode!.append(buttonElement);
+  // add event to stop video
+  buttonElement.addEventListener('click', cb);
+};
+
+// Button to stop video playback pressed
+const stopVideo: { (event: MouseEvent): void } = (_: MouseEvent) => {
   links.classList.toggle('show-menu');
   let videoElement = document.querySelector(
     '#myVideo'
@@ -1759,6 +1822,7 @@ const stopVideo = () => {
     allMediaStreams = allMediaStreams.filter(
       (mediaStream) => mediaStream.videoId !== 'myVideo'
     );
+    // remove stop button
     document.querySelector('#stopVideo')!.remove();
   }
   videoElement.pause();
@@ -1777,6 +1841,7 @@ const stopVideo = () => {
   // remove container for video sharing
   document.querySelector('.localVideoShareContainer')!.remove();
   shareVideo.disabled = false;
+  shareYtube.disabled = false;
 
   if (!sharingScreen) {
     shareScreen.disabled = false;
@@ -1914,4 +1979,11 @@ const viewAudioGraph = ({
   );
 };
 
-export { partySide, callToken, connection };
+export {
+  partySide,
+  callToken,
+  connection,
+  myBridgeId,
+  sharingScreen,
+  createStopButton,
+};

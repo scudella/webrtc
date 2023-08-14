@@ -48,6 +48,7 @@
   },
   "devDependencies": {
     "@types/google.accounts": "0.0.7",
+    "@types/youtube": "0.0.47",
     "axios": "1.4.0",
     "clean-webpack-plugin": "4.0.0",
     "nodemon": "2.0.21",

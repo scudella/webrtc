@@ -52,11 +52,23 @@ app.use(
 app.use(
   helmet.contentSecurityPolicy({
     directives: {
-      scriptSrc: ["'self'", 'https://accounts.google.com/gsi/client'],
-      defaultSrc: ["'self'", 'https://accounts.google.com'],
+      scriptSrc: [
+        "'self'",
+        'https://accounts.google.com/gsi/client',
+        'https://www.youtube.com/iframe_api',
+        'https://www.youtube.com/s/player/',
+        "'unsafe-inline'",
+      ],
+      defaultSrc: [
+        "'self'",
+        'https://accounts.google.com',
+        'https://www.youtube.com',
+        'https://www.youtube-nocookie.com',
+      ],
       styleSrc: [
         "'self'",
         'https://accounts.google.com/gsi/style',
+
         'https://cdnjs.cloudflare.com/ajax/libs/font-awesome/',
         "'unsafe-inline'",
       ],
@@ -64,6 +76,7 @@ app.use(
         "'self'",
         'https://lh3.googleusercontent.com',
         `${process.env.CLOUDINARY_IMAGES}`,
+        'https://i.ytimg.com',
       ],
     },
   })

@@ -13,6 +13,9 @@ OF THIS SOFTWARE.
 */
 
 import { partySide, callToken, connection, Pc } from './webrtc';
+import { receiveYoutubeMessage } from './youtube';
+import { setMaxWidth } from './utils/dom';
+
 let canvas: HTMLCanvasElement;
 let ctx: CanvasRenderingContext2D;
 let messages: Message[] = [];
@@ -44,6 +47,8 @@ const toggleCanvasChat = () => {
     if (videoContainer.classList.contains('videoContainerNoChatShare')) {
       videoContainer.classList.remove('videoContainerNoChatShare');
       videoContainer.classList.add('videoContainerChatShare');
+      // Set max-width for youtube video
+      setMaxWidth('#youtubeShareContainer');
     }
     // Create containers for chat
     const chatContainer = document.createElement('div');
@@ -161,6 +166,8 @@ const toggleCanvasChat = () => {
     if (videoContainer.classList.contains('videoContainerChatShare')) {
       videoContainer.classList.remove('videoContainerChatShare');
       videoContainer.classList.add('videoContainerNoChatShare');
+      // Set max-width for youtube video
+      setMaxWidth('#youtubeShareContainer');
     }
   }
 };
@@ -175,7 +182,7 @@ const setDataChannel = (pc: Pc) => {
   dataChannel.onopen = () => {
     // set the call back for receiving messages
     dataChannel.onmessage = () => receiveMessage;
-    console.log('Caller data channel opened');
+    console.log('Caller data channel opened for chat');
   };
 };
 
@@ -242,13 +249,23 @@ const receiveMessage = (event: MessageEvent) => {
 const onDataChannel = (event: RTCDataChannelEvent, pc: Pc) => {
   // setting data channel
   const dataChannel = event.channel;
-  pc.chatDataChannel = dataChannel;
-  // when channel opens, just send message to the console
-  dataChannel.onopen = function () {
-    console.log('Data channel opened');
-  };
-  // set the call back for receiving messages
-  dataChannel.onmessage = receiveMessage;
+  if (dataChannel.label === 'chat') {
+    pc.chatDataChannel = dataChannel;
+    // when channel opens, just send message to the console
+    dataChannel.onopen = function () {
+      console.log('Chat Data channel opened');
+    };
+    // set the call back for receiving messages
+    dataChannel.onmessage = receiveMessage;
+  } else if (dataChannel.label === 'youtube') {
+    pc.youtubeDataChannel = dataChannel;
+    // when channel opens, just send message to the console
+    dataChannel.onopen = function () {
+      console.log('youtube data channel opened');
+      // set the call back for receiving messages
+      dataChannel.onmessage = receiveYoutubeMessage;
+    };
+  }
 };
 
 const chatInputHandler = () => {
@@ -450,7 +467,7 @@ const roundedRect = (
 
 const formatMessage = (message: string) => {
   // Array for the break lines
-  const messageLines = [];
+  const messageLines: string[] = [];
   let lineLength = 30;
   // Mark the initial of the new line
   let charPos = 0;
