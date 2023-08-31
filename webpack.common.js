@@ -1,7 +1,7 @@
 const path = require('path');
+// const HtmlWebpackPlugin = require('html-webpack-plugin');
 
 module.exports = {
-  mode: 'development',
   entry: {
     '/': './src/start.ts',
     login: './src/login.ts',
@@ -12,11 +12,16 @@ module.exports = {
     reset: './src/reset.ts',
     verify: './src/verify.ts',
   },
+  // plugins: [
+  //   new HtmlWebpackPlugin({
+  //     title: 'Production',
+  //   }),
+  // ],
   output: {
     filename: '[name]_bundle.js',
     path: path.resolve(__dirname, 'public/js'),
+    clean: true,
   },
-  devtool: 'inline-source-map',
   module: {
     rules: [
       {
