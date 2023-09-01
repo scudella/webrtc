@@ -174,7 +174,7 @@ const setDataChannel = (pc: Pc) => {
   // set call back for the channel opened
   dataChannel.onopen = () => {
     // set the call back for receiving messages
-    dataChannel.onmessage = () => receiveMessage;
+    dataChannel.onmessage = receiveMessage;
     console.log('Caller data channel opened');
   };
 };
@@ -346,8 +346,8 @@ const printMessage = (
     let currentMessage = messages[i - 1];
 
     // format message to fit the box
-    const formatedMessage = formatMessage(currentMessage.message);
-    const messageHeight = 25 + 15 * formatedMessage.length;
+    const formattedMessage = formatMessage(currentMessage.message);
+    const messageHeight = 25 + 15 * formattedMessage.length;
     //
     // Move y coordinate up for the next message
     y += -10 - messageHeight;
@@ -356,7 +356,7 @@ const printMessage = (
     // Format right or left and different background colors
     // if message from myself or from someone else
 
-    // Draw the placehold for the message
+    // Draw the placeholder for the message
     if (currentMessage.fromMyself) {
       x = 45;
       ctx.strokeStyle = 'rgb(33,33,33)';
@@ -401,7 +401,7 @@ const printMessage = (
     // Change font size for the message content
     ctx.font = '14px serif';
     let internalY = y;
-    formatedMessage.forEach((message) => {
+    formattedMessage.forEach((message) => {
       ctx.fillText(message.toString(), x + 20, internalY + 15);
       internalY += 15;
     });
@@ -646,7 +646,7 @@ const addMessage = (message: Message) => {
   const request = objectStore.add(message);
 
   request.onsuccess = function (_) {
-    // console.log(`Message ${event.target.result} added.`);
+    // console.log(`Message ${event} added.`);
   };
 
   request.onerror = function (event: Event) {
@@ -658,33 +658,36 @@ const addMessage = (message: Message) => {
 
 const readAllMessages = () => {
   if (!dbWebRTC) {
-    console.log('dbWebRTC not opened');
-  }
-  const objectStore = dbWebRTC.transaction('messages').objectStore('messages');
-  // the array of messages that will hold results
+    console.log('Error! dbWebRTC not opened');
+  } else {
+    const objectStore = dbWebRTC
+      .transaction('messages')
+      .objectStore('messages');
+    // the array of messages that will hold results
 
-  objectStore.openCursor().onsuccess = function (event: Event) {
-    const cursor = (event.target as IDBRequest).result;
-    if (cursor) {
-      // add a message in the array with the same token and party
-      // party is used to avoid duplicated messages in localhost usage
-      if (
-        cursor.value.partySide === partySide &&
-        cursor.value.token === callToken
-      ) {
-        messages.push(cursor.value);
+    objectStore.openCursor().onsuccess = function (event: Event) {
+      const cursor = (event.target as IDBRequest).result;
+      if (cursor) {
+        // add a message in the array with the same token and party
+        // party is used to avoid duplicated messages in localhost usage
+        if (
+          cursor.value.partySide === partySide &&
+          cursor.value.callToken === callToken
+        ) {
+          messages.push(cursor.value);
+        }
+        cursor.continue();
+      } else {
+        // print messages if canvas is present
+        if (toggleCanvas) {
+          printMessage(canvas, ctx, messages, 1);
+          document
+            .getElementById('slider')!
+            .setAttribute('max', `${messages.length}`);
+        }
       }
-      cursor.continue();
-    } else {
-      // print messages if canvas is present
-      if (toggleCanvas) {
-        printMessage(canvas, ctx, messages, 1);
-        document
-          .getElementById('slider')!
-          .setAttribute('max', `${messages.length}`);
-      }
-    }
-  };
+    };
+  }
 };
 
 const slideMessage = () => {
