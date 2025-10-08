@@ -12,7 +12,7 @@ const defaultPasswordConfig = {
     min: 2,
     max: 2,
   },
-  spacialCharactors: {
+  spacialCharacters: {
     includes: [],
     min: 0,
     max: 0,

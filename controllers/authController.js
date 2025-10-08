@@ -11,14 +11,26 @@ const {
   createHash,
   verifyGoogleJWT,
   defaultPasswordConfig,
+  sanitizeName,
+  sanitizeEmail,
 } = require('../utils');
 const crypto = require('crypto');
-const strongPaswordGenerator = require('strong-password-generator');
+const strongPasswordGenerator = require('strong-password-generator');
 const { avatar } = require('../utils/avatar');
 
 const register = async (req, res) => {
   const { name, email, password } = req.body;
+
+  if (!sanitizeName(name)) {
+    throw new CustomError.BadRequestError('Name contains special characters');
+  }
+
+  if (!sanitizeEmail(email)) {
+    throw new CustomError.BadRequestError('Email malformed');
+  }
+
   const emailAlreadyExists = await User.findOne({ email });
+
   if (emailAlreadyExists) {
     throw new CustomError.BadRequestError('Email already exists');
   }
@@ -77,7 +89,7 @@ const login = async (req, res) => {
             'Please provide valid gmail credentials'
           );
         }
-        const password = strongPaswordGenerator.generatePassword();
+        const password = strongPasswordGenerator.generatePassword();
         user = await User.create({
           name,
           email,

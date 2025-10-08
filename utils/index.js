@@ -8,6 +8,7 @@ const createHash = require('./createHash');
 const { logError, logComment } = require('./logs');
 const { defaultPasswordConfig } = require('./strongPassword');
 const { avatar } = require('./avatar');
+const { sanitizeName, sanitizeEmail } = require('./sanitizeString');
 
 module.exports = {
   createJWT,
@@ -23,4 +24,6 @@ module.exports = {
   logComment,
   defaultPasswordConfig,
   avatar,
+  sanitizeName,
+  sanitizeEmail,
 };

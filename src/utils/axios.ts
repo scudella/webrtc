@@ -1,5 +1,5 @@
 const axiosError = (error: any) => {
-  if (error.response) {
+  if (error.response?.data) {
     // The request was made and the server responded with a status code
     // that falls out of the range of 2xx
     // console.log(error.response.data);
