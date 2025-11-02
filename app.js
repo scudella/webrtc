@@ -16,6 +16,30 @@ require('express-async-errors');
 const express = require('express');
 const app = express();
 
+const prometheusClient = require('prom-client');
+const register = new prometheusClient.Registry();
+// Enable the collection of default Node.js process metrics
+prometheusClient.collectDefaultMetrics({ register });
+
+const httpRequestCounter = new prometheusClient.Counter({
+  name: 'http_requests_total',
+  help: 'Total number of HTTP requests',
+  labelNames: ['method', 'path'],
+  registers: [register],
+});
+
+// Middleware to track request count
+app.use((req, res, next) => {
+  httpRequestCounter.inc({ method: req.method, path: req.path });
+  next();
+});
+
+// Expose a /metrics endpoint for Prometheus
+app.get('/metrics', async (req, res) => {
+  res.set('Content-Type', register.contentType);
+  res.end(await register.metrics());
+});
+
 // database
 const connectDB = require('./db/connect');
 const mongoSanitize = require('express-mongo-sanitize');

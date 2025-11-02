@@ -4,4 +4,5 @@ remote-debug-profile
 public/video
 public/.vscode
 .env*
+public/js/
 TODO
