@@ -1848,7 +1848,7 @@ type AudioGraph = {
   width: HTMLCanvasElement['width'];
   height: HTMLCanvasElement['height'];
   analyser: AnalyserNode;
-  dataArray: Uint8Array;
+  dataArray: Uint8Array<ArrayBuffer>;
   treshold: number;
 };
 

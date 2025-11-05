@@ -1,7 +1,7 @@
 // utility functions for console logs
 
 const logError = (error) => {
-  if (error !== 'Connection closed' && error !== undefined) {
+  if (error !== 'Connection closed' && error !== undefined && error !== null) {
     logComment(`ERROR: ${error}`);
   }
 };

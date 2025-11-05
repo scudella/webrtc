@@ -13,6 +13,7 @@ const {
   defaultPasswordConfig,
   sanitizeName,
   sanitizeEmail,
+  logComment,
 } = require('../utils');
 const crypto = require('crypto');
 const strongPasswordGenerator = require('strong-password-generator');
@@ -55,13 +56,18 @@ const register = async (req, res) => {
 
   const origin = process.env.CLIENT_ORIGIN;
 
-  await sendVerificationEmail({
-    name: user.name,
-    email: user.email,
-    verificationToken: user.verificationToken,
-    origin,
-  });
-
+  try {
+    await sendVerificationEmail({
+      name: user.name,
+      email: user.email,
+      verificationToken: user.verificationToken,
+      origin,
+    });
+  } catch (error) {
+    logComment('Could not send the verification email for user registering.');
+    await User.deleteOne(user._id);
+    throw new Error('Server could not send the email.');
+  }
   res.status(StatusCodes.CREATED).json({
     msg: 'Success! Please check your email to verify account',
   });
