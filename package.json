@@ -3,10 +3,12 @@
   "version": "3.01.2",
   "description": "WebRTC app",
   "main": "app.js",
+  "type": "module",
   "scripts": {
-    "start": "node app.js",
-    "dev": "nodemon app.js",
-    "debug": "nodemon --inspect app.js",
+    "start": "node dist/app.js",
+    "dev": "nodemon --exec node --loader ts-node/esm app.ts",
+    "debug": "nodemon --inspect --exec node --loader ts-node/esm app.ts",
+    "build": "tsc --project tsconfig.json",
     "bundle-dev": "webpack --config webpack.dev.js",
     "bundle-prod": "webpack --config webpack.prod.js"
   },

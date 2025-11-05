@@ -1,0 +1,34 @@
+{
+  "compilerOptions": {
+    /* Language and Environment */
+    "target": "es2020", // Safe target for modern browsers
+    "lib": ["dom", "es2020", "dom.iterable"], // Include DOM types
+
+    /* Modules */
+    "module": "esnext", // Optimal for Webpack bundling
+    "moduleResolution": "bundler", // Let Webpack handle the resolution
+    "rootDir": "./src",
+    "outDir": "./public/js", // Output bundled JS files
+
+    /* Emit */
+    "sourceMap": true,
+    "noEmitOnError": true,
+
+    /* Interop Constraints */
+    "esModuleInterop": true,
+    "forceConsistentCasingInFileNames": true,
+
+    /* Type Checking */
+    "strict": true,
+    "noUnusedLocals": true,
+    "noUnusedParameters": true,
+    "noImplicitReturns": true,
+
+    /* Completeness */
+    "skipLibCheck": true
+  },
+
+  // Explicitly include only the frontend source files
+  "include": ["src/**/*.ts"],
+  "exclude": ["node_modules", "app.ts", "*.ts"]
+}
