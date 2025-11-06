@@ -1,9 +1,10 @@
-require('dotenv').config();
-const CustomError = require('../errors');
-const { isTokenValid } = require('../utils');
-const Token = require('../models/Token');
-const { attachCookiesToResponse } = require('../utils');
-const cookieParser = require('cookie-parser');
+import * as dotenv from 'dotenv';
+import * as CustomError from '../errors/index.js';
+import { isTokenValid, attachCookiesToResponse } from '../utils/index.js';
+import Token from '../models/Token.js';
+import cookieParser from 'cookie-parser';
+
+dotenv.config();
 
 const authenticateUser = async (req, res, next) => {
   const { refreshToken, accessToken } = req.signedCookies;
@@ -84,8 +85,4 @@ const authenticateWsUser = async (req) => {
   }
 };
 
-module.exports = {
-  authenticateUser,
-  authorizePermissions,
-  authenticateWsUser,
-};
+export { authenticateUser, authorizePermissions, authenticateWsUser };

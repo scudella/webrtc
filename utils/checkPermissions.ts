@@ -1,4 +1,4 @@
-const CustomError = require('../errors');
+import * as CustomError from '../errors/index.js';
 
 const checkPermissions = (requestUser, resourceUserId) => {
   if (requestUser.role === 'admin') return;
@@ -6,4 +6,4 @@ const checkPermissions = (requestUser, resourceUserId) => {
   throw new CustomError.UnauthorizedError('No authorized to access this route');
 };
 
-module.exports = checkPermissions;
+export default checkPermissions;

@@ -1,4 +1,4 @@
-var string = require('string-sanitizer');
+import string from 'string-sanitizer';
 
 function sanitizeName(name) {
   const sanitizedName = string.sanitize.keepSpace(name);
@@ -12,4 +12,4 @@ function sanitizeEmail(email) {
   return string.validate.isEmail(email);
 }
 
-module.exports = { sanitizeName, sanitizeEmail };
+export { sanitizeName, sanitizeEmail };

@@ -10,4 +10,4 @@ const logComment = (comment) => {
   console.log(`${new Date()} ${comment}`);
 };
 
-module.exports = { logError, logComment };
+export { logError, logComment };

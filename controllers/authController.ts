@@ -1,23 +1,24 @@
-require('dotenv').config();
-const User = require('../models/User');
-const Token = require('../models/Token');
-const { StatusCodes } = require('http-status-codes');
-const CustomError = require('../errors');
-const {
+import * as dotenv from 'dotenv';
+import User from '../models/User.js';
+import Token from '../models/Token.js';
+import { StatusCodes } from 'http-status-codes';
+import * as CustomError from '../errors/index.js';
+import {
   attachCookiesToResponse,
   createTokenUser,
   sendVerificationEmail,
   sendResetPasswordEmail,
   createHash,
   verifyGoogleJWT,
-  defaultPasswordConfig,
   sanitizeName,
   sanitizeEmail,
   logComment,
-} = require('../utils');
-const crypto = require('crypto');
-const strongPasswordGenerator = require('strong-password-generator');
-const { avatar } = require('../utils/avatar');
+} from '../utils/index.js';
+import crypto from 'crypto';
+import generatePassword from 'omgopass';
+import { avatar } from '../utils/avatar.js';
+
+dotenv.config();
 
 const register = async (req, res) => {
   const { name, email, password } = req.body;
@@ -36,14 +37,18 @@ const register = async (req, res) => {
     throw new CustomError.BadRequestError('Email already exists');
   }
 
-  // first registered user is an admin
-  const isFirstAccount = (await User.countDocuments({})) === 0;
-  const role = isFirstAccount ? 'admin' : 'user';
+  if (password.length < 8) {
+    throw new CustomError.BadRequestError(
+      'Password length is 8 or more characters'
+    );
+  }
+
+  const role = 'user';
 
   const verificationToken = crypto.randomBytes(40).toString('hex');
 
   // Select a random avatar;
-  picture = avatar[Math.floor(Math.random() * avatar.length)];
+  const picture = avatar[Math.floor(Math.random() * avatar.length)];
 
   const user = await User.create({
     name,
@@ -95,7 +100,7 @@ const login = async (req, res) => {
             'Please provide valid gmail credentials'
           );
         }
-        const password = strongPasswordGenerator.generatePassword();
+        const password = generatePassword();
         user = await User.create({
           name,
           email,
@@ -200,7 +205,6 @@ const verifyEmail = async (req, res) => {
   res.status(StatusCodes.OK).json({ msg: 'Email verified' });
 };
 
-// It is possible to someone reset the password without verifying the account first
 const forgotPassword = async (req, res) => {
   const { email } = req.body;
   if (!email) {
@@ -208,7 +212,8 @@ const forgotPassword = async (req, res) => {
   }
 
   const user = await User.findOne({ email });
-  if (user) {
+
+  if (user && user.isVerified) {
     const passwordToken = crypto.randomBytes(70).toString('hex');
     // send email
     const origin = process.env.CLIENT_ORIGIN;
@@ -228,10 +233,12 @@ const forgotPassword = async (req, res) => {
       { passwordToken: passwordTokenHashed, passwordTokenExpirationDate },
       { new: true, runValidators: true }
     );
+    res
+      .status(StatusCodes.OK)
+      .json({ msg: 'Please check your email for reset password link' });
+  } else {
+    throw new CustomError.UnauthenticatedError('Please, verify your email');
   }
-  res
-    .status(StatusCodes.OK)
-    .json({ msg: 'Please check your email for reset password link' });
 };
 
 const resetPassword = async (req, res) => {
@@ -265,7 +272,7 @@ const showAndroidId = (req, res) => {
   res.status(StatusCodes.OK).json({ clientId });
 };
 
-module.exports = {
+export {
   register,
   login,
   logout,

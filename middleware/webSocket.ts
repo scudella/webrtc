@@ -1,7 +1,7 @@
-const Room = require('../models/Room');
-const { logError, logComment } = require('../utils');
-const { authenticateWsUser } = require('./authentication');
-const uuid = require('uuid');
+import Room from '../models/Room.js';
+import { logError, logComment } from '../utils/index.js';
+import { authenticateWsUser } from './authentication.js';
+import * as uuid from 'uuid';
 
 const webrtcClients = {};
 const webrtcRooms = {};
@@ -608,4 +608,4 @@ const removeRoomFromList = ({ token, id }) => {
   }
 };
 
-module.exports = { signalRequest };
+export { signalRequest };

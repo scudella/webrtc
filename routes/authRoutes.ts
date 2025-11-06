@@ -1,9 +1,9 @@
-const express = require('express');
+import express from 'express';
+import { authenticateUser } from '../middleware/authentication.js';
+
 const router = express.Router();
 
-const { authenticateUser } = require('../middleware/authentication');
-
-const {
+import {
   register,
   login,
   logout,
@@ -12,7 +12,7 @@ const {
   resetPassword,
   showWebId,
   showAndroidId,
-} = require('../controllers/authController');
+} from '../controllers/authController.js';
 
 router.route('/register').post(register);
 router.route('/login').post(login);
@@ -23,4 +23,4 @@ router.route('/reset-password').post(resetPassword);
 router.route('/show-web-id').get(showWebId);
 router.route('/show-android-id').get(showAndroidId);
 
-module.exports = router;
+export default router;

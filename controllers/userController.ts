@@ -1,11 +1,11 @@
-const User = require('../models/User');
-const { StatusCodes } = require('http-status-codes');
-const CustomError = require('../errors');
-const {
+import User from '../models/User.js';
+import { StatusCodes } from 'http-status-codes';
+import * as CustomError from '../errors/index.js';
+import {
   createTokenUser,
   attachCookiesToResponse,
   checkPermissions,
-} = require('../utils');
+} from '../utils/index.js';
 
 const getAllUsers = async (req, res) => {
   const users = await User.find({ role: 'user' }).select('-password');
@@ -59,7 +59,7 @@ const updateUserPassword = async (req, res) => {
   res.status(StatusCodes.OK).json({ msg: 'Success! Password updated' });
 };
 
-module.exports = {
+export {
   getAllUsers,
   getSingleUser,
   showCurrentUser,

@@ -1,4 +1,4 @@
-const sendEmail = require('./sendEmail');
+import sendEmail from './sendEmail.js';
 
 const sendVerificationEmail = async ({
   name,
@@ -19,4 +19,4 @@ const sendVerificationEmail = async ({
   });
 };
 
-module.exports = sendVerificationEmail;
+export default sendVerificationEmail;

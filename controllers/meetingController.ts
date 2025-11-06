@@ -1,6 +1,6 @@
-const Room = require('../models/Room');
-const { StatusCodes } = require('http-status-codes');
-const CustomError = require('../errors');
+import Room from '../models/Room.js';
+import { StatusCodes } from 'http-status-codes';
+import * as CustomError from '../errors/index.js';
 
 const updateRoom = async (req, res) => {
   const { name } = req.body;
@@ -70,4 +70,4 @@ const showMyRoom = async (req, res) => {
   }
 };
 
-module.exports = { updateRoom, showMyRoom };
+export { updateRoom, showMyRoom };

@@ -1,22 +1,34 @@
-require('dotenv').config();
-const path = require('path');
-const { readFileSync } = require('fs');
+import * as dotenv from 'dotenv';
+import 'express-async-errors';
+import express from 'express';
+import morgan from 'morgan';
+import cookieParser from 'cookie-parser';
+import helmet from 'helmet';
+import mongoSanitize from 'express-mongo-sanitize';
+import cors from 'cors';
+import { connectDB } from './db/connect.js';
+import { rateLimit } from 'express-rate-limit';
+import authRouter from './routes/authRoutes.js';
+import userRouter from './routes/userRoutes.js';
+import meetingRouter from './routes/meetingRoutes.js';
+import notFoundMiddleware from './middleware/not-found.js';
+import errorHandlerMiddleware from './middleware/error-handler.js';
+import { signalRequest } from './middleware/webSocket.js';
+import * as prometheusClient from 'prom-client';
+import * as ws from 'websocket';
+import { readFileSync } from 'fs';
+import * as https from 'https';
 
-// protocols
-const https = require('https');
-const websocket = require('websocket').server;
+dotenv.config();
+const websocket = ws.server;
 
 const credentials = {
   pfx: readFileSync('/etc/scudella/scudella.pfx'),
-  passphrase: readFileSync('/etc/scudella/passphrase'),
+  passphrase: readFileSync('/etc/scudella/passphrase').toString('utf8'),
 };
 
-require('express-async-errors');
-// express
-const express = require('express');
 const app = express();
 
-const prometheusClient = require('prom-client');
 const register = new prometheusClient.Registry();
 // Enable the collection of default Node.js process metrics
 prometheusClient.collectDefaultMetrics({ register });
@@ -40,32 +52,9 @@ app.get('/metrics', async (req, res) => {
   res.end(await register.metrics());
 });
 
-// database
-const connectDB = require('./db/connect');
-const mongoSanitize = require('express-mongo-sanitize');
-
-// other packages
-const morgan = require('morgan');
-const cookieParser = require('cookie-parser');
-const rateLimiter = require('express-rate-limit');
-const helmet = require('helmet');
-const xss = require('xss-clean');
-const cors = require('cors');
-
-// routers
-
-const authRouter = require('./routes/authRoutes');
-const userRouter = require('./routes/userRoutes');
-const meetingRouter = require('./routes/meetingRoutes');
-
-// middleware
-const notFoundMiddleware = require('./middleware/not-found');
-const errorHandlerMiddleware = require('./middleware/error-handler');
-const { signalRequest } = require('./middleware/webSocket');
-
 app.set('trust proxy', 1);
 app.use(
-  rateLimiter({
+  rateLimit({
     windowMs: 15 * 60 * 1000, // 15 minutes
     max: 400, // Limit each IP to 400 requests per `window` (here, per 15 minutes)
     standardHeaders: true, // Return rate limit info in the `RateLimit-*` headers
@@ -104,9 +93,8 @@ app.use(
 );
 
 app.use(cors());
-app.use(xss());
 
-// app.use(morgan('tiny'));
+app.use(morgan('tiny'));
 
 // go through all middleware
 app.use(express.json());
@@ -129,10 +117,9 @@ const port = process.env.PORT || 5000;
 const start = async () => {
   try {
     await connectDB(process.env.MONGO_URL);
-    httpsServer.listen(
-      port,
-      console.log(`Server is listening on port ${port}...`)
-    );
+    httpsServer.listen(port, () => {
+      console.log(`Server is listening on port ${port}...`);
+    });
   } catch (error) {
     console.log(error);
   }

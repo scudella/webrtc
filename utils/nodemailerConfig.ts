@@ -1,6 +1,8 @@
-require('dotenv').config();
+import * as dotenv from 'dotenv';
 
-module.exports = {
+dotenv.config();
+
+const nodemailerConfig = {
   host: process.env.EMAIL_HOST,
   port: process.env.EMAIL_PORT,
   auth: {
@@ -16,3 +18,5 @@ module.exports = {
     privateKey: process.env.PRIVATE_KEY,
   },
 };
+
+export default nodemailerConfig;
