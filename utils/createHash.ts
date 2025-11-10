@@ -1,6 +1,6 @@
 import crypto from 'crypto';
 
-const hashString = (string) =>
-  crypto.createHash('md5').update(string).digest('hex');
+const hashString = (token: string): string =>
+  crypto.createHash('md5').update(token).digest('hex');
 
 export default hashString;

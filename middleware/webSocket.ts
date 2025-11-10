@@ -1,17 +1,65 @@
+import * as ws from 'websocket';
 import Room from '../models/Room.js';
 import { logError, logComment } from '../utils/index.js';
 import { authenticateWsUser } from './authentication.js';
 import * as uuid from 'uuid';
+import { CustomUser } from '../types/types.js';
+import { IRoomDocument } from '../types/room.interface.js';
 
-const webrtcClients = {};
-const webrtcRooms = {};
+type LegRole = 'owner' | 'callee';
+
+type Leg = {
+  connection: ws.connection;
+  user: CustomUser | undefined;
+  rooms: string[];
+  role: LegRole | undefined;
+};
+
+type MessageType =
+  | 'caller_arrived'
+  | 'callee_arrived'
+  | 'ice-candidate'
+  | 'description'
+  | 'hang-up'
+  | 'hard-reset'
+  | 'waiting-room'
+  | 'party_arrived'
+  | 'reset'
+  | 'full-bridge'
+  | 'not-available'
+  | 'join'
+  | 'pcDisconnect';
+
+interface RTCSessionDescription {
+  sdp: string;
+  type: 'offer' | 'answer';
+}
+
+interface RTCIceCandidateInit {
+  candidate: string;
+  sdpMid?: string; // The media line identifier
+  sdpMLineIndex?: number;
+  usernameFragment?: string;
+}
+
+type Signal = {
+  token: string;
+  type: MessageType;
+  fromParty: string;
+  toParty?: string;
+  sdp?: RTCSessionDescription;
+  candidate?: RTCIceCandidateInit;
+};
+
+let webrtcClients: Record<string, Leg> = {};
+let webrtcRooms: Record<string, Record<string, string>> = {};
 
 // Note: if there is more than a room booked for a logged user
 // it would be possible with a single request join several rooms.
 // the same is possible for non logged user joining several rooms
-// owned by other users. Unless we impose constrainst in here.
+// owned by other users. Unless we impose constraint in here.
 
-const signalRequest = async (req) => {
+const signalRequest = async (req: ws.request) => {
   logComment(`new request ( ${req.origin} )`);
 
   await authenticateWsUser(req);
@@ -22,10 +70,11 @@ const signalRequest = async (req) => {
 
   connection.id = uuid.v4();
 
-  const leg = {
+  const leg: Leg = {
     connection,
     user,
-    rooms: [],
+    rooms: [''],
+    role: undefined,
   };
 
   try {
@@ -37,13 +86,13 @@ const signalRequest = async (req) => {
 
   connection.on('message', (evt) => callSetup(leg, evt));
 
-  connection.on('close', (evt) => connectionClosed(leg, evt));
+  connection.on('close', (code, desc) => connectionClosed(leg, code, desc));
 };
 
-const callSetup = async (leg, message) => {
+const callSetup = async (leg: Leg, message: ws.Message) => {
   const { connection, user } = leg;
   if (message.type === 'utf8') {
-    let signal = undefined;
+    let signal: Signal | undefined = undefined;
     try {
       signal = JSON.parse(message.utf8Data);
     } catch (error) {
@@ -52,18 +101,18 @@ const callSetup = async (leg, message) => {
     }
     if (signal) {
       const { token, type } = signal;
-      let room;
+      let room: IRoomDocument | null;
       try {
         room = await Room.findOne({ name: token });
       } catch (error) {
         logError(error);
         logError('Error while retrieving room');
         // tear down connection
-        connection.close('1000');
+        connection.close(1000);
         return;
       }
       if (room) {
-        const { name, capacity, sfu, ownerRequired } = room;
+        const { capacity, sfu, ownerRequired } = room;
         if (!sfu) {
           // 2-way pxp setup
           logComment(`got message ${message.utf8Data}`);
@@ -88,6 +137,7 @@ const callSetup = async (leg, message) => {
               bridgeCreate(token, connection);
               // Add owner
               bridgeAddLeg(token, connection, 'owner');
+              return;
             } else {
               // there is at least a party already in the room
               const bridge = Object.entries(webrtcRooms[token]);
@@ -99,6 +149,7 @@ const callSetup = async (leg, message) => {
                 bridgeCreate(token, connection);
                 // add the owner
                 bridgeAddLeg(token, connection, 'owner');
+                return;
               } else {
                 // check whether there is an owner
                 const owner = bridge.find((mate) => mate[1] === 'owner');
@@ -123,6 +174,7 @@ const callSetup = async (leg, message) => {
                       );
                     }
                   });
+                  return;
                 } else {
                   // other party is owner
 
@@ -173,6 +225,7 @@ const callSetup = async (leg, message) => {
                 }
               }
             }
+            return;
           } else if (type === 'join') {
             //***************************************** */
             //
@@ -238,6 +291,7 @@ const callSetup = async (leg, message) => {
                 });
                 // enter the room as callee
                 bridgeAddLeg(token, connection, 'callee');
+                return;
               } else {
                 // the room is full
                 // send a message back
@@ -255,6 +309,7 @@ const callSetup = async (leg, message) => {
                 );
               }
             }
+            return;
           } else {
             //***************************************** */
             //
@@ -265,7 +320,7 @@ const callSetup = async (leg, message) => {
             if (webrtcRooms[token] === undefined) {
               // bridge should exist at this point
               // drop the connection
-              connection.close('1002');
+              connection.close(1002);
               logComment(
                 `message ${message.utf8Data} received without a bridge from ${connection.remoteAddress}`
               );
@@ -320,7 +375,7 @@ const callSetup = async (leg, message) => {
                           }
                           removeRoomFromList({ token, id });
                         });
-                        // delete bridge after droping all
+                        // delete bridge after dropping all
                         deleteBridge(token, 'after dropping all');
                       } else {
                         // owner still on the call, send hang-up to
@@ -343,15 +398,17 @@ const callSetup = async (leg, message) => {
                     }
                   } else if (type === 'pcDisconnect') {
                     const { toParty } = signal;
-                    bridgeDeleteLeg({
-                      token,
-                      party: toParty,
-                      reason: 'disconnect by owner',
-                    });
+                    if (toParty) {
+                      bridgeDeleteLeg({
+                        token,
+                        party: toParty,
+                        reason: 'disconnect by owner',
+                      });
+                    }
                   } else {
                     // then send the message to the destination
                     Object.keys(webrtcRooms[token]).forEach((id) => {
-                      if (id != connection.id && id === signal.toParty) {
+                      if (id != connection.id && id === signal?.toParty) {
                         try {
                           // add connection.id to the message
                           signal.fromParty = connection.id;
@@ -372,7 +429,7 @@ const callSetup = async (leg, message) => {
                 } else {
                   // invalid message
                   // drop the connection
-                  connection.close('1002');
+                  connection.close(1002);
                   logError(
                     `message ${message.utf8Data} received does not exist - from ${connection.remoteAddress}`
                   );
@@ -381,7 +438,7 @@ const callSetup = async (leg, message) => {
               } else {
                 // party did not previously join the room
                 // drop the connection
-                connection.close('1002');
+                connection.close(1002);
                 logError(
                   `message ${message.utf8Data} from ${connection.remoteAddress} received but party did not join the bridge`
                 );
@@ -389,8 +446,10 @@ const callSetup = async (leg, message) => {
               }
             }
           }
+          return;
         } else {
           // sfu logic here
+          return;
         }
       } else {
         // there is no room booked
@@ -408,25 +467,29 @@ const callSetup = async (leg, message) => {
             user ? user.userId : 'anonymous'
           } at ${token}`
         );
+        return;
       }
     } else {
       // no signal after parse json
       logError(`invalid signal: ${message.utf8Data}`);
-      connection.close('1002');
+      connection.close(1002);
       return;
     }
   } else {
     // message type is not utf8
-    logError(`invalid signal: ${message.utf8Data}`);
-    connection.close('1002');
+    logError(`invalid signal: ${message}`);
+    connection.close(1002);
     return;
   }
 };
 
 // the close connection behaves as there can be multiple callees in a room
-const connectionClosed = (connection, evt) => {
+const connectionClosed = (leg: Leg, code: number, description: string) => {
+  const { connection } = leg;
   if (webrtcClients[connection.id] !== undefined) {
-    logComment(`connection closed ( ${connection.remoteAddress} )`);
+    logComment(
+      `connection closed ( ${connection.remoteAddress} ), code : ${code}, description: ${description}`
+    );
     // get list of rooms from the given connection
     webrtcClients[connection.id].rooms.forEach((token) => {
       // delete the id from the room
@@ -468,16 +531,16 @@ const connectionClosed = (connection, evt) => {
     });
     // end of rooms, delete the client
     try {
-      delete webrtcClients[id];
+      delete webrtcClients[connection.id];
     } catch (error) {
       logError(error);
-      logError(`error deleting the client ${id}`);
+      logError(`error deleting the client ${connection.id}`);
       return;
     }
   }
 };
 
-const bridgeReset = (token) => {
+const bridgeReset = (token: string) => {
   Object.entries(webrtcRooms[token]).forEach((mate) => {
     const id = mate[0];
     const role = mate[1];
@@ -514,18 +577,22 @@ const bridgeReset = (token) => {
   deleteBridge(token, 'at bridge reset');
 };
 
-const bridgeCreate = (token, connection) => {
+const bridgeCreate = (token: string, connection: ws.connection) => {
   try {
     webrtcRooms[token] = {};
   } catch (error) {
     logError(error);
     logError(`error creating a new room ${token}`);
-    connection.close('1000');
+    connection.close(1000);
     return;
   }
 };
 
-const bridgeAddLeg = (token, connection, legRole) => {
+const bridgeAddLeg = (
+  token: string,
+  connection: ws.connection,
+  legRole: LegRole
+) => {
   const { id } = connection;
   try {
     if (webrtcRooms[token][id]) {
@@ -539,12 +606,20 @@ const bridgeAddLeg = (token, connection, legRole) => {
   } catch (error) {
     logError(error);
     logError(`error adding ${id} ${legRole} to bridge ${token}`);
-    connection.close('1000');
+    connection.close(1000);
     return;
   }
 };
 
-const bridgeDeleteLeg = ({ token, party, reason }) => {
+const bridgeDeleteLeg = ({
+  token,
+  party,
+  reason,
+}: {
+  token: string;
+  party: string;
+  reason: string;
+}) => {
   let partyIsOwner = false;
   const bridge = Object.entries(webrtcRooms[token]);
   bridge.forEach((mate) => {
@@ -567,7 +642,7 @@ const bridgeDeleteLeg = ({ token, party, reason }) => {
   return partyIsOwner;
 };
 
-const deleteBridge = (token, reason) => {
+const deleteBridge = (token: string, reason: string) => {
   try {
     delete webrtcRooms[token];
     logComment(`room ${token} deleted`);
@@ -577,7 +652,11 @@ const deleteBridge = (token, reason) => {
   }
 };
 
-const notConnected = (firstId, token, secondConnection) => {
+const notConnected = (
+  firstId: string,
+  token: string,
+  secondConnection: ws.connection
+) => {
   // if owner had a browser reset it won't be connected
   if (!webrtcClients[firstId].connection.connected) {
     // owner is gone
@@ -589,7 +668,7 @@ const notConnected = (firstId, token, secondConnection) => {
   }
 };
 
-const removeRoomFromList = ({ token, id }) => {
+const removeRoomFromList = ({ token, id }: { token: string; id: string }) => {
   const connection = webrtcClients[id].connection;
   // remove room from the list
   const newList = webrtcClients[id].rooms.filter((item) => item !== token);
@@ -597,7 +676,7 @@ const removeRoomFromList = ({ token, id }) => {
   if (!newList.length) {
     // close connection;
     try {
-      connection.close('1000');
+      connection.close(1000);
       delete webrtcClients[id];
     } catch (error) {
       logError(error);

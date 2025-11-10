@@ -1,6 +1,9 @@
-import mongoose from 'mongoose';
+import mongoose, { Schema, Model } from 'mongoose';
+import { IRoomDocument } from '../types/room.interface.js';
 
-const RoomSchema = new mongoose.Schema(
+type RoomModelType = Model<IRoomDocument>;
+
+const RoomSchema: Schema = new Schema(
   {
     name: {
       type: String,
@@ -36,4 +39,8 @@ const RoomSchema = new mongoose.Schema(
   { timestamps: true }
 );
 
-export default mongoose.model('Room', RoomSchema);
+const RoomModel = mongoose.model<IRoomDocument, RoomModelType>(
+  'Room',
+  RoomSchema
+);
+export default RoomModel;

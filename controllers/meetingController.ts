@@ -1,23 +1,31 @@
 import Room from '../models/Room.js';
 import { StatusCodes } from 'http-status-codes';
 import * as CustomError from '../errors/index.js';
+import { Request, Response } from 'express';
 
-const updateRoom = async (req, res) => {
+interface UpdateRoomBody {
+  name: string;
+}
+
+const updateRoom = async (
+  req: Request<{}, {}, UpdateRoomBody>,
+  res: Response
+): Promise<void> => {
   const { name } = req.body;
   const userAgent = req.headers['user-agent'];
   const ip = req.ip;
-  const { userId } = req.user;
+
   // Check for existing room
   const existingRoom = await Room.findOne({ name });
 
   if (!existingRoom) {
     // Found no room with this name
     // check if user already has a room
-    const existingUser = await Room.findOne({ user: userId });
+    const existingUser = await Room.findOne({ user: req.user?.userId });
     if (existingUser) {
       // user has a room, update it
-      const room = await Room.findOneAndUpdate(
-        { user: userId },
+      await Room.findOneAndUpdate(
+        { user: req.user?.userId },
         {
           name,
           ip,
@@ -29,11 +37,11 @@ const updateRoom = async (req, res) => {
         .json({ msg: `User already has a room; updated to ${name}` });
     } else {
       // user has no room; create it
-      const room = await Room.create({
+      await Room.create({
         name,
         ip,
         userAgent,
-        user: userId,
+        user: req.user?.userId,
       });
       res
         .status(StatusCodes.CREATED)
@@ -41,9 +49,9 @@ const updateRoom = async (req, res) => {
     }
   } else {
     // Room already exist! Check if this user owns it
-    if (existingRoom.user.toString() === userId) {
+    if (existingRoom.user.toString() === req.user?.userId) {
       // same user, update room
-      const room = await Room.findOneAndUpdate(
+      await Room.findOneAndUpdate(
         { name },
         {
           ip,
@@ -60,9 +68,8 @@ const updateRoom = async (req, res) => {
   }
 };
 
-const showMyRoom = async (req, res) => {
-  const { userId } = req.user;
-  const existingRoom = await Room.findOne({ user: userId });
+const showMyRoom = async (req: Request, res: Response): Promise<void> => {
+  const existingRoom = await Room.findOne({ user: req.user?.userId });
   if (existingRoom) {
     res.status(StatusCodes.OK).json({ room: existingRoom.name });
   } else {

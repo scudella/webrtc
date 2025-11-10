@@ -1,12 +1,12 @@
 // utility functions for console logs
 
-const logError = (error) => {
+const logError = (error: string | undefined | null | unknown): void => {
   if (error !== 'Connection closed' && error !== undefined && error !== null) {
     logComment(`ERROR: ${error}`);
   }
 };
 
-const logComment = (comment) => {
+const logComment = (comment: string): void => {
   console.log(`${new Date()} ${comment}`);
 };
 

@@ -1,4 +1,5 @@
 import * as dotenv from 'dotenv';
+dotenv.config();
 import 'express-async-errors';
 import express from 'express';
 import morgan from 'morgan';
@@ -19,7 +20,6 @@ import * as ws from 'websocket';
 import { readFileSync } from 'fs';
 import * as https from 'https';
 
-dotenv.config();
 const websocket = ws.server;
 
 const credentials = {
@@ -41,13 +41,13 @@ const httpRequestCounter = new prometheusClient.Counter({
 });
 
 // Middleware to track request count
-app.use((req, res, next) => {
+app.use((req, _, next) => {
   httpRequestCounter.inc({ method: req.method, path: req.path });
   next();
 });
 
 // Expose a /metrics endpoint for Prometheus
-app.get('/metrics', async (req, res) => {
+app.get('/metrics', async (_, res) => {
   res.set('Content-Type', register.contentType);
   res.end(await register.metrics());
 });
@@ -114,9 +114,10 @@ app.use(errorHandlerMiddleware);
 const httpsServer = https.createServer(credentials, app);
 
 const port = process.env.PORT || 5000;
+const mongoURL = process.env.MONGO_URL ?? '';
 const start = async () => {
   try {
-    await connectDB(process.env.MONGO_URL);
+    await connectDB(mongoURL);
     httpsServer.listen(port, () => {
       console.log(`Server is listening on port ${port}...`);
     });

@@ -1,13 +1,32 @@
 import { StatusCodes } from 'http-status-codes';
+import { Request, Response, NextFunction } from 'express';
 
-const errorHandlerMiddleware = (err, req, res, next) => {
+interface AdditionalErrorProps {
+  statusCode?: number;
+  code?: number;
+  errors?: Record<string, { message: string }>; // For Mongoose Validation
+  keyValue?: Record<string, unknown>; // For MongoDB Duplicate Key
+  value?: unknown; // For Mongoose CastError
+}
+
+type FallbackError = Error & AdditionalErrorProps;
+
+const errorHandlerMiddleware = (
+  err: unknown,
+  _: Request,
+  res: Response,
+  __: NextFunction
+) => {
+  const typedErr = err as FallbackError;
+
   let customError = {
     // set default
-    statusCode: err.statusCode || StatusCodes.INTERNAL_SERVER_ERROR,
-    msg: err.message || 'Something went wrong try again later',
+    statusCode: typedErr.statusCode || StatusCodes.INTERNAL_SERVER_ERROR,
+    msg: typedErr.message || 'Something went wrong try again later',
   };
-  if (err.name === 'ValidationError') {
-    customError.msg = Object.values(err.errors)
+
+  if (typedErr.name === 'ValidationError' && typedErr.errors) {
+    customError.msg = Object.values(typedErr.errors)
       .map((item) => item.message)
       .join(',');
     customError.statusCode = 400;
@@ -15,14 +34,16 @@ const errorHandlerMiddleware = (err, req, res, next) => {
       customError.msg = 'Password minimum length is 8';
     }
   }
-  if (err.code && err.code === 11000) {
+
+  if (typedErr.code && typedErr.code === 11000 && typedErr.keyValue) {
     customError.msg = `Duplicate value entered for ${Object.keys(
-      err.keyValue
+      typedErr.keyValue
     )} field, please choose another value`;
     customError.statusCode = 400;
   }
-  if (err.name === 'CastError') {
-    customError.msg = `No item found with id : ${err.value}`;
+
+  if (typedErr.name === 'CastError' && typedErr.value !== undefined) {
+    customError.msg = `No item found with id : ${typedErr.value}`;
     customError.statusCode = 404;
   }
 

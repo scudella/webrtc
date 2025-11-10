@@ -1,6 +1,9 @@
-import mongoose from 'mongoose';
+import mongoose, { Schema, Model } from 'mongoose';
+import { ITokenDocument } from '../types/token.interface.js';
 
-const TokenSchema = new mongoose.Schema(
+type TokenModelType = Model<ITokenDocument>;
+
+const TokenSchema: Schema = new Schema(
   {
     refreshToken: { type: String, required: true },
     ip: { type: String, required: true },
@@ -15,4 +18,8 @@ const TokenSchema = new mongoose.Schema(
   { timestamps: true }
 );
 
-export default mongoose.model('Token', TokenSchema);
+const TokenModel = mongoose.model<ITokenDocument, TokenModelType>(
+  'Token',
+  TokenSchema
+);
+export default TokenModel;

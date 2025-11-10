@@ -3,10 +3,17 @@ import * as CustomError from '../errors/index.js';
 import { isTokenValid, attachCookiesToResponse } from '../utils/index.js';
 import Token from '../models/Token.js';
 import cookieParser from 'cookie-parser';
+import { Request, Response, NextFunction, RequestHandler } from 'express';
+import { UserRole } from '../types/user.interface.js';
+import { request } from 'websocket';
 
 dotenv.config();
 
-const authenticateUser = async (req, res, next) => {
+const authenticateUser = async (
+  req: Request,
+  res: Response,
+  next: NextFunction
+): Promise<void> => {
   const { refreshToken, accessToken } = req.signedCookies;
 
   try {
@@ -35,9 +42,9 @@ const authenticateUser = async (req, res, next) => {
   }
 };
 
-const authorizePermissions = (...roles) => {
-  return (req, res, next) => {
-    if (!roles.includes(req.user.role)) {
+const authorizePermissions = (...roles: UserRole[]): RequestHandler => {
+  return (req: Request, _: Response, next: NextFunction) => {
+    if (req.user?.role && !roles.includes(req.user.role)) {
       throw new CustomError.UnauthorizedError(
         'Unauthorized to access this route'
       );
@@ -46,16 +53,16 @@ const authorizePermissions = (...roles) => {
   };
 };
 
-const authenticateWsUser = async (req) => {
+const authenticateWsUser = async (req: request): Promise<void> => {
   let refreshToken, accessToken;
-  req.cookies.forEach((cookie) => {
+  req.cookies.forEach((cookie: Record<string, any>) => {
     const { name } = cookie;
-    if (name === 'refreshToken') {
+    if (process.env.JWT_SECRET && name === 'refreshToken') {
       refreshToken = cookieParser.signedCookie(
         cookie.value,
         process.env.JWT_SECRET
       );
-    } else if (name === 'accessToken') {
+    } else if (process.env.JWT_SECRET && name === 'accessToken') {
       accessToken = cookieParser.signedCookie(
         cookie.value,
         process.env.JWT_SECRET

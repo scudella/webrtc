@@ -17,10 +17,42 @@ import {
 import crypto from 'crypto';
 import generatePassword from 'omgopass';
 import { avatar } from '../utils/avatar.js';
+import { Request, Response } from 'express';
 
 dotenv.config();
 
-const register = async (req, res) => {
+interface RegisterRequestBody {
+  name: string;
+  email: string;
+  password: string;
+}
+
+interface LoginRequestBody {
+  email: string;
+  password: string;
+  credential: string;
+  checkbox: string;
+}
+
+interface VerifyEmailBody {
+  verificationToken: string;
+  email: string;
+}
+
+interface ForgotPasswordBody {
+  email: string;
+}
+
+interface ResetPasswordBody {
+  token: string;
+  email: string;
+  password: string;
+}
+
+const register = async (
+  req: Request<{}, {}, RegisterRequestBody>,
+  res: Response
+): Promise<void> => {
   const { name, email, password } = req.body;
 
   if (!sanitizeName(name)) {
@@ -59,13 +91,13 @@ const register = async (req, res) => {
     picture,
   });
 
-  const origin = process.env.CLIENT_ORIGIN;
+  const origin = process.env.CLIENT_ORIGIN ?? 'https://localhost:5000';
 
   try {
     await sendVerificationEmail({
       name: user.name,
       email: user.email,
-      verificationToken: user.verificationToken,
+      verificationToken: user.verificationToken!,
       origin,
     });
   } catch (error) {
@@ -78,7 +110,10 @@ const register = async (req, res) => {
   });
 };
 
-const login = async (req, res) => {
+const login = async (
+  req: Request<{}, {}, LoginRequestBody>,
+  res: Response
+): Promise<void> => {
   const { email, password, credential, checkbox } = req.body;
   let user;
 
@@ -89,20 +124,21 @@ const login = async (req, res) => {
   // credential from google login
   if (credential) {
     try {
-      const { sub, email, email_verified, name, picture } =
-        await verifyGoogleJWT(credential);
+      const payload = await verifyGoogleJWT(credential);
+      const email = payload?.email;
+      const picture = payload?.picture ?? '';
       user = await User.findOne({ email });
       if (!user) {
         // user does not exist. register required and done here.
         // if exists nothing else required
-        if (!email_verified) {
+        if (!payload?.email_verified) {
           throw new CustomError.BadRequestError(
             'Please provide valid gmail credentials'
           );
         }
         const password = generatePassword();
         user = await User.create({
-          name,
+          name: payload?.name,
           email,
           password,
           role: 'user',
@@ -110,12 +146,12 @@ const login = async (req, res) => {
           isVerified: true,
           verified: Date.now(),
           picture,
-          sub,
+          sub: payload?.sub,
         });
       } else {
         if (checkbox) {
           await User.findOneAndUpdate({ email }, { picture });
-          user.picture = picture;
+          user.picture = payload?.picture;
         }
       }
     } catch (error) {
@@ -171,8 +207,8 @@ const login = async (req, res) => {
   res.status(StatusCodes.OK).json({ user: tokenUser });
 };
 
-const logout = async (req, res) => {
-  await Token.findOneAndDelete({ user: req.user.userId });
+const logout = async (req: Request, res: Response): Promise<void> => {
+  await Token.findOneAndDelete({ user: req.user?.userId });
   res.cookie('accessToken', 'random string', {
     httpOnly: true,
     expires: new Date(Date.now()),
@@ -184,7 +220,10 @@ const logout = async (req, res) => {
   res.status(StatusCodes.OK).json({ msg: 'user logged out!' });
 };
 
-const verifyEmail = async (req, res) => {
+const verifyEmail = async (
+  req: Request<{}, {}, VerifyEmailBody>,
+  res: Response
+): Promise<void> => {
   const { verificationToken, email } = req.body;
   const user = await User.findOne({ email });
 
@@ -205,7 +244,10 @@ const verifyEmail = async (req, res) => {
   res.status(StatusCodes.OK).json({ msg: 'Email verified' });
 };
 
-const forgotPassword = async (req, res) => {
+const forgotPassword = async (
+  req: Request<{}, {}, ForgotPasswordBody>,
+  res: Response
+): Promise<void> => {
   const { email } = req.body;
   if (!email) {
     throw new CustomError.BadRequestError('Please provide valid email');
@@ -216,7 +258,7 @@ const forgotPassword = async (req, res) => {
   if (user && user.isVerified) {
     const passwordToken = crypto.randomBytes(70).toString('hex');
     // send email
-    const origin = process.env.CLIENT_ORIGIN;
+    const origin = process.env.CLIENT_ORIGIN ?? 'https://localhost:5000';
     await sendResetPasswordEmail({
       name: user.name,
       email: user.email,
@@ -241,7 +283,10 @@ const forgotPassword = async (req, res) => {
   }
 };
 
-const resetPassword = async (req, res) => {
+const resetPassword = async (
+  req: Request<{}, {}, ResetPasswordBody>,
+  res: Response
+): Promise<void> => {
   const { token, email, password } = req.body;
   if (!token || !email || !password) {
     throw new CustomError.BadRequestError('Please provide all values');
@@ -251,23 +296,24 @@ const resetPassword = async (req, res) => {
     const currentDate = new Date();
     if (
       user.passwordToken === createHash(token) &&
+      user.passwordTokenExpirationDate &&
       user.passwordTokenExpirationDate > currentDate
     ) {
       user.password = password;
-      user.passwordToken = null;
-      user.passwordTokenExpirationDate = null;
+      user.passwordToken = undefined;
+      user.passwordTokenExpirationDate = undefined;
       await user.save();
     }
   }
   res.send('reset password');
 };
 
-const showWebId = (req, res) => {
+const showWebId = (_: Request, res: Response): void => {
   const clientId = process.env.GOOGLE_WEB_CLIENT_ID;
   res.status(StatusCodes.OK).json({ clientId });
 };
 
-const showAndroidId = (req, res) => {
+const showAndroidId = (_: Request, res: Response): void => {
   const clientId = process.env.GOOGLE_ANDROID_CLIENT_ID;
   res.status(StatusCodes.OK).json({ clientId });
 };

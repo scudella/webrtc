@@ -2,20 +2,28 @@ import * as dotenv from 'dotenv';
 
 dotenv.config();
 
+const host = process.env.EMAIL_HOST ?? '';
+const port = Number(process.env.EMAIL_PORT) ?? 587;
+const user = process.env.EMAIL_USER ?? '';
+const pass = process.env.EMAIL_PASSWORD ?? '';
+const domainName = process.env.DOMAIN_NAME ?? '';
+const keySelector = process.env.KEY_SELECTOR ?? '';
+const privateKey = process.env.PRIVATE_KEY ?? '';
+
 const nodemailerConfig = {
-  host: process.env.EMAIL_HOST,
-  port: process.env.EMAIL_PORT,
+  host,
+  port,
   auth: {
-    user: process.env.EMAIL_USER,
-    pass: process.env.EMAIL_PASSWORD,
+    user,
+    pass,
   },
   tls: {
     rejectUnauthorized: false,
   },
   dkim: {
-    domainName: process.env.DOMAIN_NAME,
-    keySelector: process.env.KEY_SELECTOR,
-    privateKey: process.env.PRIVATE_KEY,
+    domainName,
+    keySelector,
+    privateKey,
   },
 };
 

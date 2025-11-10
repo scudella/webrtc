@@ -1,0 +1,11 @@
+{
+  "watch": ["**/*.ts"],
+  "exec": "npm run build && node dist/app.js",
+  "ext": "ts",
+  "execMap": {
+    "ts": "ts-node"
+  },
+  "events": {
+    "restart": "npm run build"
+  }
+}

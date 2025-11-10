@@ -8,6 +8,7 @@ import createHash from './createHash.js';
 import { logError, logComment } from './logs.js';
 import { avatar } from './avatar.js';
 import { sanitizeName, sanitizeEmail } from './sanitizeString.js';
+import { emailValidator } from './validateEmail.js';
 
 export {
   createJWT,
@@ -24,4 +25,5 @@ export {
   avatar,
   sanitizeName,
   sanitizeEmail,
+  emailValidator,
 };
