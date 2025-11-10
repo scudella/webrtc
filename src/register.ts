@@ -17,6 +17,22 @@ import { googleButtonLogin } from './utils/googleLogin';
 import { copyrightDate } from './utils/date';
 import axios from 'axios';
 
+interface SuccessResponseData {
+  msg: string;
+}
+
+type UserRole = 'admin' | 'user' | 'sfuser';
+
+interface LoginResponseData {
+  user: {
+    name: string;
+    email: string;
+    userId: string;
+    role: UserRole;
+    picture: string | undefined;
+  };
+}
+
 window.onload = function init() {
   const inputName = document.getElementById('name')! as HTMLInputElement;
   const inputEmail = document.getElementById('email')! as HTMLInputElement;
@@ -51,7 +67,10 @@ window.onload = function init() {
     sectionPage.classList.remove('no-page');
     const registerUser = { name, email, password };
     try {
-      const response = await axios.post(`/api/v1/auth/register`, registerUser);
+      const response = await axios.post<SuccessResponseData>(
+        `/api/v1/auth/register`,
+        registerUser
+      );
       inputName.value = '';
       inputEmail.value = '';
       inputPassword.value = '';
@@ -80,7 +99,10 @@ window.onload = function init() {
     sectionMeeting.classList.add('no-meeting');
     sectionPage.classList.remove('no-page');
     try {
-      const resp = await axios.post(`/api/v1/auth/login`, loginUser);
+      const resp = await axios.post<LoginResponseData>(
+        `/api/v1/auth/login`,
+        loginUser
+      );
       const user = resp.data.user;
       // send welcome message
       sectionPage.classList.add('no-page');

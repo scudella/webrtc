@@ -26,7 +26,12 @@ module.exports = {
     rules: [
       {
         test: /\.tsx?$/,
-        use: 'ts-loader',
+        use: {
+          loader: 'ts-loader',
+          options: {
+            configFile: 'tsconfig.frontend.json', // <-- Use the dedicated frontend file
+          },
+        },
         exclude: /node_modules/,
       },
     ],

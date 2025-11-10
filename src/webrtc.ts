@@ -1193,9 +1193,13 @@ const removeRemotePC = ({
         }
       }
     });
-    const videoContainer = document.querySelector('#videoContainer')!;
+    const videoContainer: HTMLDivElement =
+      document.querySelector('#videoContainer')!;
     // remove the div element
-    for (const child of videoContainer.children) {
+
+    const videoContainerChildren = Array.from(videoContainer.children);
+
+    for (const child of videoContainerChildren) {
       if (child.classList.contains(`${pos}`)) {
         child.remove();
       }
