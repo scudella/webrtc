@@ -17,13 +17,13 @@ import { googleButtonLogin } from './utils/googleLogin';
 import { copyrightDate } from './utils/date';
 import axios from 'axios';
 
-interface SuccessResponseData {
+export interface SuccessResponseData {
   msg: string;
 }
 
 type UserRole = 'admin' | 'user' | 'sfuser';
 
-interface LoginResponseData {
+export interface LoginResponseData {
   user: {
     name: string;
     email: string;

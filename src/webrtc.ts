@@ -41,17 +41,18 @@ type VideoId =
   | 'screen'
   | 'myVideo';
 
-type AllMediaStreams = {
+type MediaStreams = {
   mediaStream: MediaStream;
   videoId: VideoId;
   fromParty?: Signal['fromParty'];
   videoElement?: HTMLVideoElement;
-}[];
+};
 
 let callToken = '';
 let socket: WebSocket;
 let virtualCanvas: HTMLCanvasElement;
-let allMediaStreams: AllMediaStreams = [];
+let allMediaStreams: MediaStreams[] = [];
+let mediaStreamTrack: MediaStreamTrack;
 let connection: Connection = [];
 let noVideoCall = false;
 let sharingScreen = false;
@@ -687,8 +688,19 @@ const callerReceivesCalleeArrived = (signal: Signal) => {
     .getTracks()
     .forEach((track) => peerConnection.addTrack(track, mediaStream));
 
-  // if video is in mute send canvas instead
-  if (noVideoCall) {
+  if (sharingScreen) {
+    // video sent was replaced by a sharing app or browser tab
+
+    const sender = pc.peerConnection
+      .getSenders()
+      .find((sender) => sender.track && sender.track.kind === 'video');
+    if (sender) {
+      sender.replaceTrack(mediaStreamTrack);
+    } else {
+      console.log('no sender found to replace track');
+    }
+  } else if (noVideoCall) {
+    // if video is in mute send canvas instead
     const canvasStream = allMediaStreams.find(
       (stream) => stream.videoId === 'canvas'
     );
@@ -906,8 +918,20 @@ const calleeSignalling = (event: MessageEvent) => {
       .getTracks()
       .forEach((track) => peerConnection.addTrack(track, mediaStream));
 
+    if (sharingScreen) {
+      // video sent was replaced by a sharing app or browser tab
+
+      const sender = pc.peerConnection
+        .getSenders()
+        .find((sender) => sender.track && sender.track.kind === 'video');
+      if (sender) {
+        sender.replaceTrack(mediaStreamTrack);
+      } else {
+        console.log('no sender found to replace track');
+      }
+    }
     // if video is in mute send canvas instead
-    if (noVideoCall) {
+    else if (noVideoCall) {
       const canvasStream = allMediaStreams.find(
         (stream) => stream.videoId === 'canvas'
       );
@@ -1418,27 +1442,27 @@ const replaceShareScreen = () => {
   // Remove sidebar
   links.classList.toggle('show-menu');
   // disable share screen button
-  shareScreen.disabled = true;
-  replaceScreen.disabled = true;
   navigator.mediaDevices
     .getDisplayMedia()
     .then((stream) => {
-      const screenTrack = stream.getTracks()[0];
+      mediaStreamTrack = stream.getTracks()[0];
       // replaces local video sender track
       // indicates sharing screen for no video canvas replacement
-      sharingScreen = true;
       connection.forEach((pc) => {
         const sender = pc.peerConnection
           .getSenders()
           .find((sender) => sender.track && sender.track.kind === 'video');
         if (sender) {
-          sender.replaceTrack(screenTrack);
+          sender.replaceTrack(mediaStreamTrack);
         }
       });
+      shareScreen.disabled = true;
+      replaceScreen.disabled = true;
+      sharingScreen = true;
 
       // set callback for ended track
       // this is called when replaceScreen share has ended
-      screenTrack.onended = function () {
+      mediaStreamTrack.onended = function () {
         sharingScreen = false;
         replaceScreen.disabled = false;
         // check whether this party is sharing a video
