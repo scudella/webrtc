@@ -1,7 +1,10 @@
-const path = require('path');
-// const HtmlWebpackPlugin = require('html-webpack-plugin');
+import path, { dirname } from 'path';
+import { fileURLToPath } from 'url';
 
-module.exports = {
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = dirname(__filename);
+
+const config = {
   entry: {
     '/': './src/start.ts',
     login: './src/login.ts',
@@ -40,3 +43,5 @@ module.exports = {
     extensions: ['.ts', '.js'],
   },
 };
+
+export default config;
